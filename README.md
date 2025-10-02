@@ -5,3 +5,10 @@ Coco is really bad at being left home alone and being in a semi detached propert
 # Running
 
 `node enhanced-bark-tracker.js stream '<rtsp-url>' --model yamnet`
+
+## TODOs
+
+- create time periods DB table
+- get time periods from DB
+- add dialog for creating new time period
+- add dialog to amend time period
