@@ -8,3 +8,5 @@
 *.mp4
 *.wav
 *.db
+*.db-shm
+*.db-wal

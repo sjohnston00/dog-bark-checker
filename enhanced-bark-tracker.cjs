@@ -10,7 +10,7 @@ const wav = require('wav')
 const { createReadStream, createWriteStream } = require('fs')
 
 // Import our enhanced detectors
-const { YAMNetBarkDetector } = require('./tensorflow-models')
+const { YAMNetBarkDetector } = require('./tensorflow-models.cjs')
 
 // Initialize database (same as before)
 function initDatabase() {
