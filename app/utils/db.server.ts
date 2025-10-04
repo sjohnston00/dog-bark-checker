@@ -1,8 +1,6 @@
 import Database from "better-sqlite3";
 
-const db = new Database("bark_detections.db", {
-  verbose: console.log,
-});
+const db = new Database("bark_detections.db", {});
 db.pragma("journal_mode = WAL");
 db.exec(`CREATE TABLE IF NOT EXISTS detections (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,10 +1,4 @@
-import {
-  addMinutes,
-  isAfter,
-  isBefore,
-  isSameMinute,
-  startOfMinute,
-} from "date-fns";
+import { addMinutes, isSameMinute, startOfMinute } from "date-fns";
 import type { Detection } from "~/types/db";
 
 export type DetectionConfidenceLevelData = {
@@ -54,14 +48,13 @@ export function aggregateByDetectionsMinute(
   // Initialize all minutes in the range with zero values
   let current = startOfMinute(startDate);
 
-  console.log("Aggregating from", current, "to", endDate);
-  console.log("Total detections:", detections.length);
-
   const result: AggregatedByMinuteDetection[] = [];
+
+  //Iterate from startDate to endDate, adding one minute each time
   let aggregationCounter = 0;
   while (current <= endDate) {
     const count = detections.filter((d) =>
-      isSameMinute(new Date(d.created_at), current)
+      isSameMinute(d.created_at, current)
     ).length;
     result.push({
       minute: current,
@@ -71,23 +64,6 @@ export function aggregateByDetectionsMinute(
     aggregationCounter += count;
     current = addMinutes(current, 1);
   }
-
-  console.log("Aggregated total count:", aggregationCounter);
-
-  // // Aggregate the actual data
-  // detections.forEach((d) => {
-  //   if (d.created_at >= startDate && d.created_at <= endDate) {
-  //     // Round down to the minute
-  //     const minuteDate = new Date(d.created_at);
-  //     minuteDate.setSeconds(0, 0);
-  //     const minuteKey = minuteDate.toISOString();
-
-  //     const existing = minuteMap.get(minuteKey);
-  //     if (existing) {
-  //       existing.count += 1;
-  //     }
-  //   }
-  // });
 
   // Sort by minute (should already be sorted, but being explicit)
   return result.sort((a, b) => a.minute.getTime() - b.minute.getTime());
