@@ -14,4 +14,13 @@ db.exec(`CREATE TABLE IF NOT EXISTS detections (
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
+db.exec(`CREATE TABLE IF NOT EXISTS time_periods (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            start_time TEXT NOT NULL,
+            end_time TEXT NOT NULL,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
 export default db;

@@ -1,4 +1,4 @@
-import { data } from 'react-router'
+import { data, Form } from 'react-router'
 import {
   Card,
   CardContent,
@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle
 } from '~/components/ui/card'
-import type { Detection } from '~/types/db'
+import type { Detection, TimePeriod } from '~/types/db'
 import db from '~/utils/db.server'
 import {
   aggregateByDetectionsMinute,
@@ -33,6 +33,29 @@ import {
   ChartTooltipContent,
   type ChartConfig
 } from '~/components/ui/chart'
+import { Button } from '~/components/ui/button'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "~/components/ui/dialog"
+import { Label } from '~/components/ui/label'
+import { Input } from '~/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
+import { EllipsisVerticalIcon } from 'lucide-react'
+import { DropdownMenuGroup } from '@radix-ui/react-dropdown-menu'
 
 const chartConfig = {
   count: {
@@ -46,6 +69,9 @@ export async function loader({ request }: Route.LoaderArgs) {
     .prepare('SELECT * FROM detections ORDER BY created_at DESC')
     .all() as Detection[]
 
+  const dbTimePeriods = db
+    .prepare('SELECT * FROM time_periods ORDER BY date DESC, start_time DESC').all() as TimePeriod[]
+
   /**
    * These are time periods where the dog was known to be barking.
    */
@@ -56,40 +82,16 @@ export async function loader({ request }: Route.LoaderArgs) {
     groupedDetectionsByConfidenceLevels: DetectionConfidenceLevelData[]
     aggregatedByMinute: AggregatedByMinuteDetection[]
     biggestGap: number | null
-  }[] = [
-      {
-        start: new Date('2025-09-27T16:18'),
-        end: new Date('2025-09-27T16:38'),
-        detections: [],
-        groupedDetectionsByConfidenceLevels: [],
-        aggregatedByMinute: [],
-        biggestGap: null
-      },
-      {
-        start: new Date('2025-09-28T09:15'),
-        end: new Date('2025-09-28T09:25'),
-        detections: [],
-        groupedDetectionsByConfidenceLevels: [],
-        aggregatedByMinute: [],
-        biggestGap: null
-      },
-      {
-        start: new Date('2025-10-02T16:10'),
-        end: new Date('2025-10-02T16:36'),
-        detections: [],
-        groupedDetectionsByConfidenceLevels: [],
-        aggregatedByMinute: [],
-        biggestGap: null
-      },
-      {
-        start: new Date('2025-10-03T16:18'),
-        end: new Date('2025-10-03T16:48'),
-        detections: [],
-        groupedDetectionsByConfidenceLevels: [],
-        aggregatedByMinute: [],
-        biggestGap: null
-      }
-    ]
+  }[] = dbTimePeriods.map(d => {
+    return {
+      start: new Date(`${d.date}T${d.start_time}`),
+      end: new Date(`${d.date}T${d.end_time}`),
+      detections: [],
+      groupedDetectionsByConfidenceLevels: [],
+      aggregatedByMinute: [],
+      biggestGap: null
+    }
+  })
 
   for (let index = 0; index < timePeriods.length; index++) {
     const t = timePeriods[index]
@@ -119,9 +121,111 @@ export const headers: Route.HeadersFunction = () => {
   return headers
 }
 
+export async function action({ request }: Route.ActionArgs) {
+  const formData = await request.formData()
+
+  const action = formData.get('_action')
+
+  switch (action) {
+    case 'add-time-period':
+      const date = formData.get('date') as string
+      const startTime = formData.get('startTime') as string
+      const endTime = formData.get('endTime') as string
+
+      if (!date || !startTime || !endTime) {
+        return null
+      }
+
+      // const start = new Date(`${date}T${startTime}`)
+      // const end = new Date(`${date}T${endTime}`)
+
+      // if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      //   return null
+      // }
+
+      db.prepare('INSERT INTO time_periods (date, start_time, end_time) VALUES (?, ?, ?)')
+        .run(date, startTime, endTime)
+      return null
+    case 'delete-time-period':
+      const dateToDelete = formData.get('date') as string
+      if (!dateToDelete) {
+        return null
+      }
+      db.prepare('DELETE FROM time_periods WHERE date = ?').run(dateToDelete)
+      return null
+
+    default:
+      return null
+  }
+}
+
 export default function IndexPage({ loaderData }: Route.ComponentProps) {
   return (
-    <div className='p-4'>
+    <>
+      <Dialog>
+        <DialogTrigger className='mb-4'><Button>Add Times</Button></DialogTrigger>
+        <DialogContent autoFocus={false}>
+          <DialogHeader>
+            <DialogTitle>Add New Time Period</DialogTitle>
+          </DialogHeader>
+          <Form method='post' preventScrollReset replace autoComplete='off' navigate={false}>
+            <input type='hidden' name='_action' value='add-time-period' />
+            <div className='grid mb-4'>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="date" className="px-1">
+                  Date
+                </Label>
+                <Input
+                  type="date"
+                  id="date"
+                  name='date'
+                  step="1"
+                  defaultValue={formatDate(new Date(), 'yyyy-MM-dd')}
+                  className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                />
+              </div>
+            </div>
+            <div className='grid grid-cols-2 gap-4'>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="startTime" className="px-1">
+                  Start
+                </Label>
+                <Input
+                  type="time"
+                  id="startTime"
+                  name='startTime'
+                  step="1"
+                  defaultValue="00:00:00"
+                  className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                />
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="endTime" className="px-1">
+                  End
+                </Label>
+                <Input
+                  type="time"
+                  id="endTime"
+                  name='endTime'
+                  step="1"
+                  defaultValue="00:00:00"
+                  className="bg-background appearance-none [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-calendar-picker-indicator]:appearance-none"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant={'outline'}>Close</Button>
+              </DialogClose>
+              <DialogClose asChild>
+                <Button type="submit" variant={'default'}>Save</Button>
+              </DialogClose>
+            </DialogFooter>
+          </Form>
+        </DialogContent>
+
+      </Dialog>
       {loaderData.timePeriods.map((t) => {
         const duration = formatDuration(
           intervalToDuration({
@@ -131,10 +235,45 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
         )
         return (
           <div key={`time-period-${t.start.toISOString()}`} className='mb-8'>
-            <h1 className='text-4xl font-extrabold tracking-tight text-balance'>
-              {formatDate(t.start, 'EEE do LLL HH:mm')} -{' '}
-              {formatDate(t.end, 'HH:mm')}
-            </h1>
+            <div className='flex items-center justify-between mx-2'>
+
+              <h1 className='text-4xl font-extrabold tracking-tight text-balance'>
+                {formatDate(t.start, 'EEE do LLL HH:mm')} -{' '}
+                {formatDate(t.end, 'HH:mm')}
+              </h1>
+              <Dialog>
+                <DropdownMenu>
+                  <DropdownMenuTrigger ><Button variant={'outline'}><EllipsisVerticalIcon /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent side='left' align='start'>
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuLabel>Edit</DropdownMenuLabel>
+                    <DialogTrigger asChild>
+                      <DropdownMenuItem variant='destructive'>Delete</DropdownMenuItem>
+                    </DialogTrigger>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <DialogContent><DialogHeader>
+                  <DialogTitle>Are you absolutely sure?</DialogTitle>
+                  <DialogDescription>
+                    This action cannot be undone. Are you sure you want to permanently
+                    delete this time period?
+                  </DialogDescription>
+                </DialogHeader>
+                  <Form method='post' replace preventScrollReset navigate={false}>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button variant={'outline'} type='button'>Cancel</Button>
+                      </DialogClose>
+                      <input type='hidden' name='_action' value='delete-time-period' />
+                      <input type='hidden' name='date' value={formatDate(t.start, 'yyyy-MM-dd')} />
+                      <DialogClose asChild>
+                        <Button variant={'destructive'} type='submit'>Delete</Button>
+                      </DialogClose>
+                    </DialogFooter>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </div>
             <div className='grid grid-cols-1 lg:grid-cols-2 mt-4 gap-4'>
               <Card>
                 <CardHeader>
@@ -172,6 +311,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                       />
                       <CartesianGrid vertical={false} strokeDasharray={4} />
                       <Bar
+                        isAnimationActive={false}
                         dataKey='count'
                         fill='var(--color-count)'
                         radius={4}
@@ -227,7 +367,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
           </div>
         )
       })}
-    </div>
+    </>
   )
 }
 
