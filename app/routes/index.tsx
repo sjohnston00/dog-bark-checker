@@ -11,13 +11,12 @@ import db from '~/utils/db.server'
 import {
   aggregateByDetectionsMinute,
   findBiggestGap,
-  groupDetectionsByConfidenceLevel,
   type AggregatedByMinuteDetection,
-  type DetectionConfidenceLevelData
 } from '~/utils/detections-transforms.server'
 import type { Route } from './+types/index'
 
 import { formatDate, formatDuration, intervalToDuration } from 'date-fns'
+import { EllipsisVerticalIcon } from 'lucide-react'
 import { useId, useState } from 'react'
 import {
   Bar,
@@ -27,13 +26,13 @@ import {
   XAxis
 } from 'recharts'
 import type { BarRectangleItem } from 'recharts/types/cartesian/Bar'
+import { Button } from '~/components/ui/button'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig
 } from '~/components/ui/chart'
-import { Button } from '~/components/ui/button'
 import {
   Dialog,
   DialogClose,
@@ -44,17 +43,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog"
-import { Label } from '~/components/ui/label'
-import { Input } from '~/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "~/components/ui/dropdown-menu"
-import { EllipsisVerticalIcon } from 'lucide-react'
+import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
 
 const chartConfig = {
   count: {
@@ -64,12 +61,17 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export async function loader({ request }: Route.LoaderArgs) {
+  let now = Date.now()
   const detections = db
     .prepare('SELECT * FROM detections ORDER BY created_at DESC')
     .all() as Detection[]
 
+  console.log('Get detections', Date.now() - now, 'ms');
+
+  now = Date.now()
   const dbTimePeriods = db
     .prepare('SELECT * FROM time_periods ORDER BY date DESC, start_time DESC').all() as TimePeriod[]
+  console.log('Get time-periods', Date.now() - now, 'ms');
 
   /**
    * These are time periods where the dog was known to be barking.
@@ -79,7 +81,6 @@ export async function loader({ request }: Route.LoaderArgs) {
     start: Date
     end: Date
     detections: Detection[]
-    groupedDetectionsByConfidenceLevels: DetectionConfidenceLevelData[]
     aggregatedByMinute: AggregatedByMinuteDetection[]
     biggestGap: number | null
   }[] = dbTimePeriods.map(d => {
@@ -88,30 +89,33 @@ export async function loader({ request }: Route.LoaderArgs) {
       start: new Date(`${d.date}T${d.start_time}`),
       end: new Date(`${d.date}T${d.end_time}`),
       detections: [],
-      groupedDetectionsByConfidenceLevels: [],
       aggregatedByMinute: [],
       biggestGap: null
     }
   })
 
+
+  now = Date.now()
   for (let index = 0; index < timePeriods.length; index++) {
     const t = timePeriods[index]
     t.detections = detections.filter((d) => {
       const createdAt = new Date(d.created_at)
       return createdAt >= t.start && createdAt <= t.end
     })
-    t.groupedDetectionsByConfidenceLevels = groupDetectionsByConfidenceLevel(
-      t.detections
-    )
+
     t.aggregatedByMinute = aggregateByDetectionsMinute(
-      detections,
+      t.detections,
       t.start,
       t.end
     )
     t.biggestGap = findBiggestGap(t.detections)?.gapMs || null
   }
+  console.log('Grouping and aggregations', Date.now() - now, 'ms');
+
+  now = Date.now()
 
   timePeriods.sort((a, b) => b.start.getTime() - a.start.getTime())
+  console.log('sorting', Date.now() - now, 'ms');
   return data({ detections, timePeriods })
 }
 
