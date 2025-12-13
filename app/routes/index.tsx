@@ -260,7 +260,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
               </h1>
               <Dialog>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild><Button variant={'outline'}><EllipsisVerticalIcon /></Button></DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild><Button variant={'outline'} aria-label='Open time period dropdown menu'><EllipsisVerticalIcon /></Button></DropdownMenuTrigger>
                   <DropdownMenuContent side='left' align='start'>
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DialogTrigger asChild>
