@@ -2,6 +2,7 @@
   "name": "dog-bark-detection",
   "private": true,
   "type": "module",
+  "version": "0.1.0",
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
