@@ -4,7 +4,7 @@ Coco is really bad at being left home alone and being in a semi detached propert
 
 # Running
 
-`node enhanced-bark-tracker.js stream '<rtsp-url>' --model yamnet`
+`node enhanced-bark-tracker.cjs stream '<rtsp-url>' --model yamnet`
 
 ## TODOs
 
