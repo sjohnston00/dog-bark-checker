@@ -70,7 +70,7 @@ export async function loader({ request }: Route.LoaderArgs) {
 
   now = Date.now()
   const dbTimePeriods = db
-    .prepare('SELECT * FROM time_periods ORDER BY date DESC, start_time DESC').all() as TimePeriod[]
+    .prepare('SELECT * FROM time_periods ORDER BY date DESC, start_time DESC LIMIT 10').all() as TimePeriod[]
   console.log('Get time-periods', Date.now() - now, 'ms');
 
   /**
