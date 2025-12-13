@@ -17,6 +17,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dog Bark Detections</title>
+        <meta name="description" content="View your dogs barks accross time periods" />
         <Meta />
         <Links />
       </head>
