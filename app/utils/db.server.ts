@@ -1,7 +1,7 @@
-import Database from "better-sqlite3";
+import Database from 'better-sqlite3'
 
-const db = new Database("bark_detections.db", {});
-db.pragma("journal_mode = WAL");
+const db = new Database('bark_detections.db', {})
+db.pragma('journal_mode = WAL')
 db.exec(`CREATE TABLE IF NOT EXISTS detections (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
@@ -12,7 +12,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS detections (
             audio_features TEXT,
             ensemble_info TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+        )`)
 
 db.exec(`CREATE TABLE IF NOT EXISTS time_periods (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,6 +21,50 @@ db.exec(`CREATE TABLE IF NOT EXISTS time_periods (
             end_time TEXT NOT NULL,
             notes TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
+        )`)
 
-export default db;
+db.exec(`CREATE TABLE IF NOT EXISTS recordings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL,
+            startTime TEXT NOT NULL,
+            endTime TEXT,
+            filePath TEXT,
+            notes TEXT,
+            status TEXT DEFAULT 'pending',
+            modelUsed TEXT,
+            updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`)
+
+db.exec(`CREATE TABLE IF NOT EXISTS devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            rtspUrl TEXT NOT NULL,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+            enabled INTEGER DEFAULT 1
+        )`)
+
+export type Recording = {
+  id: number
+  date: string
+  startTime: string
+  endTime: string | null
+  filePath: string | null
+  notes: string | null
+  status: 'pending' | 'completed' | 'failed'
+  modelUsed: string | null
+  updatedAt: string
+  createdAt: string
+}
+
+export type Device = {
+  id: number
+  name: string
+  rtspUrl: string
+  createdAt: string
+  updatedAt: string
+  enabled: number
+}
+
+export default db
