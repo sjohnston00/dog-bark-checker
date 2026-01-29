@@ -1,8 +1,11 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import db from "./db.server";
 import RecordingsRepository from "./RecordingsRepository.server";
 
-export const recordingsMap = new Map();
+export const recordingsMap = new Map<
+  number,
+  { process: ChildProcessWithoutNullStreams; startTime: Date }
+>();
 
 export function createSession(recordingId: number) {
   console.log("Starting recording process");
@@ -36,5 +39,5 @@ export function createSession(recordingId: number) {
 
 export function stopRecording(recordingId: number) {
   const recording = recordingsMap.get(recordingId);
-  recording.process.kill("SIGTERM");
+  recording?.process.kill("SIGTERM");
 }

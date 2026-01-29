@@ -19,6 +19,7 @@ import RecordingsRepository from "~/utils/RecordingsRepository.server";
 import { BanIcon, CircleStop, EyeIcon } from "lucide-react";
 import { createSession, stopRecording } from "~/utils/recordingsMap.server";
 import { formatDuration, intervalToDuration } from "date-fns";
+import StatusBadge from "~/components/ui/statusBadge";
 
 export async function loader({}: Route.LoaderArgs) {
   const devicesRepo = new DevicesRepository({ db: db });
@@ -55,6 +56,8 @@ export async function action({ request }: Route.ActionArgs) {
       //   endTime: new Date().toISOString(),
       // });
       stopRecording(recordingIdToStop);
+
+      //await 1 second to ensure the process has stopped
       await new Promise((res, rej) => setTimeout(res, 1000));
 
       return null;
@@ -110,7 +113,7 @@ export default function Page({ loaderData }: Route.ComponentProps) {
     <div>
       <Heading>Recordings</Heading>
       <div className="alert alert-soft my-4">
-        <span>View recordings from devices cameras.</span>
+        <span>View recordings from devices.</span>
       </div>
 
       <Dialog>
@@ -184,7 +187,9 @@ export default function Page({ loaderData }: Route.ComponentProps) {
               >
                 <td>{new Date(r.startTime).toLocaleString()}</td>
                 <td>{duration}</td>
-                <td>{r.status}</td>
+                <td>
+                  <StatusBadge status={r.status} />
+                </td>
                 <td>
                   {device ? (
                     <Link

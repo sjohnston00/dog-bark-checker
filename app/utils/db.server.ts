@@ -46,6 +46,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS devices (
             enabled INTEGER DEFAULT 1
         )`);
 
+export type RecordingStatus = "pending" | "completed" | "failed" | "cancelled";
+
 export type Recording = {
   id: number;
   date: string;
@@ -53,7 +55,7 @@ export type Recording = {
   endTime: string | null;
   filePath: string | null;
   notes: string | null;
-  status: "pending" | "completed" | "failed";
+  status: RecordingStatus;
   modelUsed: string | null;
   deviceId: number;
   updatedAt: string;
