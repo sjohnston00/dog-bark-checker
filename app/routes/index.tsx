@@ -1,26 +1,26 @@
-import { data, Form } from "react-router";
-import { Card, CardContent, CardTitle } from "~/components/ui/card";
-import type { Detection, TimePeriod } from "~/types/db";
-import db from "~/utils/db.server";
+import { data, Form } from 'react-router'
+import { Card, CardContent, CardTitle } from '~/components/ui/card'
+import type { Detection, TimePeriod } from '~/types/db'
+import db from '~/utils/db.server'
 import {
   aggregateByDetectionsMinute,
   findBiggestGap,
   type AggregatedByMinuteDetection,
-} from "~/utils/detections-transforms.server";
-import type { Route } from "./+types/index";
+} from '~/utils/detections-transforms.server'
+import type { Route } from './+types/index'
 
-import { formatDate, formatDuration, intervalToDuration } from "date-fns";
-import { EllipsisVerticalIcon } from "lucide-react";
-import { useId, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Rectangle, XAxis } from "recharts";
-import type { BarRectangleItem } from "recharts/types/cartesian/Bar";
-import { Button } from "~/components/ui/button";
+import { formatDate, formatDuration, intervalToDuration } from 'date-fns'
+import { EllipsisVerticalIcon } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Bar, BarChart, CartesianGrid, Rectangle, XAxis } from 'recharts'
+import type { BarRectangleItem } from 'recharts/types/cartesian/Bar'
+import { Button } from '~/components/ui/button'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
-} from "~/components/ui/chart";
+} from '~/components/ui/chart'
 import {
   Dialog,
   DialogClose,
@@ -30,51 +30,51 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "~/components/ui/dialog";
+} from '~/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Heading } from "~/components/ui/heading";
+} from '~/components/ui/dropdown-menu'
+import { Input } from '~/components/ui/input'
+import { Label } from '~/components/ui/label'
+import { Heading } from '~/components/ui/heading'
 
 const chartConfig = {
   count: {
-    label: "Barks",
-    color: "#2563eb",
+    label: 'Barks',
+    color: '#2563eb',
   },
-} satisfies ChartConfig;
+} satisfies ChartConfig
 
 export async function loader({ request }: Route.LoaderArgs) {
-  let now = Date.now();
+  let now = Date.now()
   const detections = db
-    .prepare("SELECT * FROM detections ORDER BY created_at DESC")
-    .all() as Detection[];
+    .prepare('SELECT * FROM detections ORDER BY created_at DESC')
+    .all() as Detection[]
 
-  console.log("Get detections", Date.now() - now, "ms");
+  console.log('Get detections', Date.now() - now, 'ms')
 
-  now = Date.now();
+  now = Date.now()
   const dbTimePeriods = db
     .prepare(
-      "SELECT * FROM time_periods ORDER BY date DESC, start_time DESC LIMIT 10"
+      'SELECT * FROM time_periods ORDER BY date DESC, start_time DESC LIMIT 10'
     )
-    .all() as TimePeriod[];
-  console.log("Get time-periods", Date.now() - now, "ms");
+    .all() as TimePeriod[]
+  console.log('Get time-periods', Date.now() - now, 'ms')
 
   /**
    * These are time periods where the dog was known to be barking.
    */
   const timePeriods: {
-    id: number;
-    start: Date;
-    end: Date;
-    detections: Detection[];
-    aggregatedByMinute: AggregatedByMinuteDetection[];
-    biggestGap: number | null;
+    id: number
+    start: Date
+    end: Date
+    detections: Detection[]
+    aggregatedByMinute: AggregatedByMinuteDetection[]
+    biggestGap: number | null
   }[] = dbTimePeriods.map((d) => {
     return {
       id: d.id,
@@ -83,104 +83,104 @@ export async function loader({ request }: Route.LoaderArgs) {
       detections: [],
       aggregatedByMinute: [],
       biggestGap: null,
-    };
-  });
+    }
+  })
 
-  now = Date.now();
+  now = Date.now()
   for (let index = 0; index < timePeriods.length; index++) {
-    const t = timePeriods[index];
+    const t = timePeriods[index]
     t.detections = detections.filter((d) => {
-      const createdAt = new Date(d.created_at);
-      return createdAt >= t.start && createdAt <= t.end;
-    });
+      const createdAt = new Date(d.created_at)
+      return createdAt >= t.start && createdAt <= t.end
+    })
 
     t.aggregatedByMinute = aggregateByDetectionsMinute(
       t.detections,
       t.start,
       t.end
-    );
-    t.biggestGap = findBiggestGap(t.detections)?.gapMs || null;
+    )
+    t.biggestGap = findBiggestGap(t.detections)?.gapMs || null
   }
-  console.log("Grouping and aggregations", Date.now() - now, "ms");
+  console.log('Grouping and aggregations', Date.now() - now, 'ms')
 
-  now = Date.now();
+  now = Date.now()
 
-  timePeriods.sort((a, b) => b.start.getTime() - a.start.getTime());
-  console.log("sorting", Date.now() - now, "ms");
-  return data({ detections, timePeriods });
+  timePeriods.sort((a, b) => b.start.getTime() - a.start.getTime())
+  console.log('sorting', Date.now() - now, 'ms')
+  return data({ detections, timePeriods })
 }
 
 export const headers: Route.HeadersFunction = () => {
-  const headers = new Headers();
-  headers.append("Cache-Control", "no-store");
+  const headers = new Headers()
+  headers.append('Cache-Control', 'no-store')
 
-  return headers;
-};
+  return headers
+}
 
 type TimePeriodAction =
-  | "add-time-period"
-  | "delete-time-period"
-  | "edit-time-period";
+  | 'add-time-period'
+  | 'delete-time-period'
+  | 'edit-time-period'
 
 export async function action({ request }: Route.ActionArgs) {
-  const formData = await request.formData();
+  const formData = await request.formData()
 
   //@ts-expect-error
   const action: TimePeriodAction | undefined = formData
-    .get("_action")
-    ?.toString();
+    .get('_action')
+    ?.toString()
 
   if (!action) {
-    return null;
+    return null
   }
 
   switch (action) {
-    case "add-time-period":
-      const date = formData.get("date") as string;
-      const startTime = formData.get("startTime") as string;
-      const endTime = formData.get("endTime") as string;
+    case 'add-time-period':
+      const date = formData.get('date') as string
+      const startTime = formData.get('startTime') as string
+      const endTime = formData.get('endTime') as string
 
       if (!date || !startTime || !endTime) {
-        return null;
+        return null
       }
 
       db.prepare<[string, string, string]>(
-        "INSERT INTO time_periods (date, start_time, end_time) VALUES (?, ?, ?)"
-      ).run(date, startTime, endTime);
-      return null;
-    case "delete-time-period":
-      const dateToDelete = formData.get("date") as string;
+        'INSERT INTO time_periods (date, start_time, end_time) VALUES (?, ?, ?)'
+      ).run(date, startTime, endTime)
+      return null
+    case 'delete-time-period':
+      const dateToDelete = formData.get('date') as string
       if (!dateToDelete) {
-        return null;
+        return null
       }
-      db.prepare<[string]>("DELETE FROM time_periods WHERE date = ?").run(
+      db.prepare<[string]>('DELETE FROM time_periods WHERE date = ?').run(
         dateToDelete
-      );
-      return null;
-    case "edit-time-period":
-      const editDate = formData.get("date") as string;
-      const editStartTime = formData.get("startTime") as string;
-      const editEndTime = formData.get("endTime") as string;
-      const editId = Number(formData.get("id"));
+      )
+      return null
+    case 'edit-time-period':
+      const editDate = formData.get('date') as string
+      const editStartTime = formData.get('startTime') as string
+      const editEndTime = formData.get('endTime') as string
+      const editId = Number(formData.get('id'))
 
       if (!editDate || !editStartTime || !editEndTime || !editId) {
-        return null;
+        return null
       }
 
       db.prepare<[string, string, string, number]>(
-        "UPDATE time_periods SET date=?, start_time=?, end_time=? WHERE id=?"
-      ).run(editDate, editStartTime, editEndTime, editId);
-      return null;
+        'UPDATE time_periods SET date=?, start_time=?, end_time=? WHERE id=?'
+      ).run(editDate, editStartTime, editEndTime, editId)
+      return null
     default:
-      return null;
+      return null
   }
 }
 
 export default function IndexPage({ loaderData }: Route.ComponentProps) {
-  const [dialogState, setDialogState] = useState<"edit" | "delete">("edit");
+  const [dialogState, setDialogState] = useState<'edit' | 'delete'>('edit')
   return (
     <>
-      <div className="my-4 flex items-center gap-2">
+      <div className='my-4 flex items-center gap-2'>
         <Dialog>
           <DialogTrigger asChild>
             <Button>Add Times</Button>
@@ -190,50 +190,50 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
               <DialogTitle>Add New Time Period</DialogTitle>
             </DialogHeader>
             <Form
-              method="post"
+              method='post'
               preventScrollReset
               replace
-              autoComplete="off"
+              autoComplete='off'
               navigate={false}
             >
-              <input type="hidden" name="_action" value="add-time-period" />
-              <div className="grid mb-4">
-                <div className="flex flex-col gap-3">
-                  <Label htmlFor="date" className="px-1">
+              <input type='hidden' name='_action' value='add-time-period' />
+              <div className='grid mb-4'>
+                <div className='flex flex-col gap-3'>
+                  <Label htmlFor='date' className='px-1'>
                     Date
                   </Label>
                   <Input
-                    type="date"
-                    id="date"
-                    name="date"
-                    defaultValue={formatDate(new Date(), "yyyy-MM-dd")}
+                    type='date'
+                    id='date'
+                    name='date'
+                    defaultValue={formatDate(new Date(), 'yyyy-MM-dd')}
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex flex-col gap-3">
-                  <Label htmlFor="startTime" className="px-1">
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='flex flex-col gap-3'>
+                  <Label htmlFor='startTime' className='px-1'>
                     Start
                   </Label>
                   <Input
-                    type="time"
-                    id="startTime"
-                    name="startTime"
-                    step="60"
-                    defaultValue="00:00"
+                    type='time'
+                    id='startTime'
+                    name='startTime'
+                    step='60'
+                    defaultValue='00:00'
                     required
                   />
                 </div>
-                <div className="flex flex-col gap-3">
-                  <Label htmlFor="endTime" className="px-1">
+                <div className='flex flex-col gap-3'>
+                  <Label htmlFor='endTime' className='px-1'>
                     End
                   </Label>
                   <Input
-                    type="time"
-                    id="endTime"
-                    name="endTime"
-                    step="60"
-                    defaultValue="00:00"
+                    type='time'
+                    id='endTime'
+                    name='endTime'
+                    step='60'
+                    defaultValue='00:00'
                     required
                   />
                 </div>
@@ -241,48 +241,50 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
 
               <DialogFooter>
                 <DialogClose asChild>
-                  <Button type="button">Close</Button>
+                  <Button type='button'>Close</Button>
                 </DialogClose>
                 <DialogClose asChild>
-                  <Button type="submit">Save</Button>
+                  <Button type='submit' variant={'primary'}>
+                    Save
+                  </Button>
                 </DialogClose>
               </DialogFooter>
             </Form>
           </DialogContent>
         </Dialog>
       </div>
-      <hr className="mb-8" />
+      <hr className='mb-8' />
       {loaderData.timePeriods.map((t) => {
         const duration = formatDuration(
           intervalToDuration({
             start: t.start,
             end: t.end,
           })
-        );
+        )
         return (
-          <div key={`time-period-${t.start.toISOString()}`} className="mb-8">
-            <div className="flex items-center justify-between mx-2">
-              <Heading size={"h1"}>
-                {formatDate(t.start, "EEE do LLL HH:mm")} -{" "}
-                {formatDate(t.end, "HH:mm")}
+          <div key={`time-period-${t.start.toISOString()}`} className='mb-8'>
+            <div className='flex items-center justify-between mx-2'>
+              <Heading size={'h1'}>
+                {formatDate(t.start, 'EEE do LLL HH:mm')} -{' '}
+                {formatDate(t.end, 'HH:mm')}
               </Heading>
               <Dialog>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      btnStyle={"ghost"}
-                      aria-label="Open time period dropdown menu"
+                      btnStyle={'ghost'}
+                      aria-label='Open time period dropdown menu'
                     >
                       <EllipsisVerticalIcon />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="left" align="start">
+                  <DropdownMenuContent side='left' align='start'>
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
                     <DialogTrigger asChild>
                       <DropdownMenuItem
-                        variant="default"
+                        variant='default'
                         onClick={() => {
-                          setDialogState("edit");
+                          setDialogState('edit')
                         }}
                       >
                         Edit
@@ -290,9 +292,9 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                     </DialogTrigger>
                     <DialogTrigger asChild>
                       <DropdownMenuItem
-                        variant="destructive"
+                        variant='destructive'
                         onClick={() => {
-                          setDialogState("delete");
+                          setDialogState('delete')
                         }}
                       >
                         Delete
@@ -301,76 +303,78 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DialogContent>
-                  {dialogState === "edit" ? (
+                  {dialogState === 'edit' ? (
                     <>
                       <DialogHeader>
                         <DialogTitle>Edit Time Period</DialogTitle>
                       </DialogHeader>
                       <Form
-                        method="put"
+                        method='put'
                         replace
                         preventScrollReset
                         navigate={false}
                       >
-                        <div className="grid mb-4">
-                          <div className="flex flex-col gap-3">
-                            <Label htmlFor="date" className="px-1">
+                        <div className='grid mb-4'>
+                          <div className='flex flex-col gap-3'>
+                            <Label htmlFor='date' className='px-1'>
                               Date
                             </Label>
                             <Input
-                              type="date"
-                              id="date"
-                              name="date"
-                              step="1"
-                              defaultValue={formatDate(t.start, "yyyy-MM-dd")}
+                              type='date'
+                              id='date'
+                              name='date'
+                              step='1'
+                              defaultValue={formatDate(t.start, 'yyyy-MM-dd')}
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex flex-col gap-3">
-                            <Label htmlFor="startTime" className="px-1">
+                        <div className='grid grid-cols-2 gap-4'>
+                          <div className='flex flex-col gap-3'>
+                            <Label htmlFor='startTime' className='px-1'>
                               Start
                             </Label>
                             <Input
-                              type="time"
-                              id="startTime"
-                              name="startTime"
-                              step="60"
-                              defaultValue={formatDate(t.start, "HH:mm")}
+                              type='time'
+                              id='startTime'
+                              name='startTime'
+                              step='60'
+                              defaultValue={formatDate(t.start, 'HH:mm')}
                               required
                             />
                           </div>
-                          <div className="flex flex-col gap-3">
-                            <Label htmlFor="endTime" className="px-1">
+                          <div className='flex flex-col gap-3'>
+                            <Label htmlFor='endTime' className='px-1'>
                               End
                             </Label>
                             <Input
-                              type="time"
-                              id="endTime"
-                              name="endTime"
-                              step="60"
-                              defaultValue={formatDate(t.end, "HH:mm")}
+                              type='time'
+                              id='endTime'
+                              name='endTime'
+                              step='60'
+                              defaultValue={formatDate(t.end, 'HH:mm')}
                               required
                             />
                           </div>
                         </div>
                         <DialogFooter>
                           <DialogClose asChild>
-                            <Button type="button">Cancel</Button>
+                            <Button type='button'>Cancel</Button>
                           </DialogClose>
                           <input
-                            type="hidden"
-                            name="_action"
-                            value="edit-time-period"
+                            type='hidden'
+                            name='_action'
+                            value='edit-time-period'
                           />
-                          <input type="hidden" name="id" value={t.id} />
+                          <input type='hidden' name='id' value={t.id} />
                           <input
-                            type="hidden"
-                            name="date"
-                            value={formatDate(t.start, "yyyy-MM-dd")}
+                            type='hidden'
+                            name='date'
+                            value={formatDate(t.start, 'yyyy-MM-dd')}
                           />
                           <DialogClose asChild>
-                            <Button type="submit">Confirm</Button>
+                            <Button type='submit' variant={'primary'}>
+                              Confirm
+                            </Button>
                           </DialogClose>
                         </DialogFooter>
                       </Form>
@@ -385,27 +389,29 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                         </DialogDescription>
                       </DialogHeader>
                       <Form
-                        method="post"
+                        method='post'
                         replace
                         preventScrollReset
                         navigate={false}
                       >
                         <DialogFooter>
                           <DialogClose asChild>
-                            <Button type="button">Cancel</Button>
+                            <Button type='button'>Cancel</Button>
                           </DialogClose>
                           <input
-                            type="hidden"
-                            name="_action"
-                            value="delete-time-period"
+                            type='hidden'
+                            name='_action'
+                            value='delete-time-period'
                           />
                           <input
-                            type="hidden"
-                            name="date"
-                            value={formatDate(t.start, "yyyy-MM-dd")}
+                            type='hidden'
+                            name='date'
+                            value={formatDate(t.start, 'yyyy-MM-dd')}
                           />
                           <DialogClose asChild>
-                            <Button type="submit">Delete</Button>
+                            <Button type='submit' variant={'error'}>
+                              Delete
+                            </Button>
                           </DialogClose>
                         </DialogFooter>
                       </Form>
@@ -414,26 +420,26 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                 </DialogContent>
               </Dialog>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 mt-4 gap-4">
-              <Card className="bg-base-200">
+            <div className='grid grid-cols-1 lg:grid-cols-2 mt-4 gap-4'>
+              <Card className='bg-base-200'>
                 <CardContent>
                   <CardTitle>
-                    Barks Per Minute (<abbr title="Barks per minute">BPM</abbr>)
+                    Barks Per Minute (<abbr title='Barks per minute'>BPM</abbr>)
                   </CardTitle>
                   <ChartContainer
                     config={chartConfig}
-                    className="min-h-[200px] w-full select-none"
+                    className='min-h-[200px] w-full select-none'
                   >
                     <BarChart accessibilityLayer data={t.aggregatedByMinute}>
                       <XAxis
-                        dataKey="minute"
+                        dataKey='minute'
                         tickLine={false}
                         tickMargin={10}
-                        axisType="xAxis"
+                        axisType='xAxis'
                         minTickGap={16}
                         axisLine={false}
                         tickFormatter={(d) => {
-                          return formatDate(new Date(d), "HH:mm");
+                          return formatDate(new Date(d), 'HH:mm')
                         }}
                       />
                       <ChartTooltip
@@ -443,8 +449,8 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                             labelFormatter={(_, payload) => {
                               return formatDate(
                                 new Date(payload[0].payload.minute),
-                                "HH:mm"
-                              );
+                                'HH:mm'
+                              )
                             }}
                           />
                         }
@@ -452,8 +458,8 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                       <CartesianGrid vertical={false} strokeDasharray={4} />
                       <Bar
                         isAnimationActive={false}
-                        dataKey="count"
-                        fill="var(--color-count)"
+                        dataKey='count'
+                        fill='var(--color-count)'
                         radius={4}
                         shape={<BarGradient />}
                       />
@@ -461,27 +467,27 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                   </ChartContainer>
                 </CardContent>
               </Card>
-              <div className="grid grid-cols-2 grid-rows-2 gap-4">
-                <Card className="bg-base-200">
-                  <CardContent className="flex-1">
+              <div className='grid grid-cols-2 grid-rows-2 gap-4'>
+                <Card className='bg-base-200'>
+                  <CardContent className='flex-1'>
                     <CardTitle>Total Duration</CardTitle>
-                    <div className="grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums">
+                    <div className='grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums'>
                       {duration}
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-base-200">
-                  <CardContent className="flex-1">
+                <Card className='bg-base-200'>
+                  <CardContent className='flex-1'>
                     <CardTitle>Total Barks</CardTitle>
-                    <div className="grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums">
+                    <div className='grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums'>
                       {t.detections.length}
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-base-200">
-                  <CardContent className="flex-1">
+                <Card className='bg-base-200'>
+                  <CardContent className='flex-1'>
                     <CardTitle>Average Barks Per Minute</CardTitle>
-                    <div className="grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums">
+                    <div className='grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums'>
                       {(
                         t.aggregatedByMinute.reduce(
                           (acc, curr) => acc + curr.count,
@@ -491,37 +497,37 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="bg-base-200">
-                  <CardContent className="flex-1">
+                <Card className='bg-base-200'>
+                  <CardContent className='flex-1'>
                     <CardTitle>Longest Gap</CardTitle>
-                    <div className="grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums">
+                    <div className='grid h-full place-content-center text-4xl lg:text-5xl font-semibold tabular-nums'>
                       {t.biggestGap
                         ? `${(t.biggestGap / 1000).toLocaleString()}s`
-                        : "No gap"}
+                        : 'No gap'}
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
-            <hr className="mt-4" />
+            <hr className='mt-4' />
           </div>
-        );
+        )
       })}
     </>
-  );
+  )
 }
 
 function BarGradient(props: BarRectangleItem) {
-  const id = useId();
-  const gradientId = `gradient-${id}`;
-  const clipPathId = `clipPath-${id}`;
+  const id = useId()
+  const gradientId = `gradient-${id}`
+  const clipPathId = `clipPath-${id}`
 
   return (
     <>
       <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="100%">
-          <stop offset="0%" stopColor="var(--color-count)" />
-          <stop offset="100%" stopColor="#3242ff" />
+        <linearGradient id={gradientId} x1='0' y1='0' x2='0' y2='100%'>
+          <stop offset='0%' stopColor='var(--color-count)' />
+          <stop offset='100%' stopColor='#3242ff' />
         </linearGradient>
 
         <clipPath id={clipPathId}>
@@ -538,5 +544,5 @@ function BarGradient(props: BarRectangleItem) {
         clipPath={`url(#${clipPathId})`}
       />
     </>
-  );
+  )
 }

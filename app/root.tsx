@@ -6,7 +6,7 @@ import {
   NavLink,
   Outlet,
   Scripts,
-  ScrollRestoration
+  ScrollRestoration,
 } from 'react-router'
 
 import { MenuIcon } from 'lucide-react'
@@ -34,17 +34,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <div className='bg-base-100 navbar w-full sticky top-0 gap-2 shadow-xs z-40'>
               <span
                 className='tooltip tooltip-bottom before:text-xs before:content-[attr(data-tip)]'
-                data-tip='Menu'>
+                data-tip='Menu'
+              >
                 <label
                   aria-label='Open menu'
                   htmlFor='drawer'
-                  className='btn btn-square btn-ghost drawer-button lg:hidden '>
+                  className='btn btn-square btn-ghost drawer-button lg:hidden '
+                >
                   <MenuIcon className='size-5' />
                 </label>
               </span>
               <Link
                 to='/'
-                className='lg:hidden text-xl font-bold tracking-tight'>
+                className='lg:hidden text-xl font-bold tracking-tight'
+              >
                 Dog Bark
               </Link>
             </div>
@@ -54,7 +57,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <label
               htmlFor='drawer'
               className='drawer-overlay'
-              aria-label='Close menu'></label>
+              aria-label='Close menu'
+            ></label>
             <aside className='bg-base-100 min-h-screen w-80'>
               <div className='bg-base-100 navbar sticky top-0 gap-2 shadow-xs'>
                 <Link to='/' className='text-xl font-bold tracking-tight'>
@@ -68,7 +72,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     to='/'
                     className={({ isActive }) =>
                       `${isActive ? 'menu-active' : ''}`
-                    }>
+                    }
+                  >
                     Dashboard
                   </NavLink>
                 </li>
@@ -77,7 +82,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     to='/recordings'
                     className={({ isActive }) =>
                       `${isActive ? 'menu-active' : ''}`
-                    }>
+                    }
+                  >
                     Recordings
                   </NavLink>
                 </li>
@@ -91,7 +97,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                           end
                           className={({ isActive }) =>
                             `${isActive ? 'menu-active' : ''}`
-                          }>
+                          }
+                        >
                           All
                         </NavLink>
                       </li>
@@ -100,7 +107,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                           to='/devices/new'
                           className={({ isActive }) =>
                             `${isActive ? 'menu-active' : ''}`
-                          }>
+                          }
+                        >
                           New
                         </NavLink>
                       </li>

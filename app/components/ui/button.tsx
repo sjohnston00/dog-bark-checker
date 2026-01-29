@@ -13,28 +13,28 @@ const buttonVariants = cva('btn', {
       neutral: 'btn-neutral',
       success: 'btn-success',
       warning: 'btn-warning',
-      error: 'btn-error'
+      error: 'btn-error',
     },
     size: {
       xs: 'btn-xs',
       sm: 'btn-sm',
       lg: 'btn-lg',
-      xl: 'btn-xl'
+      xl: 'btn-xl',
     },
     modifier: {
       wide: 'btn-wide',
       block: 'btn-block',
       square: 'btn-square',
-      circle: 'btn-circle'
+      circle: 'btn-circle',
     },
     btnStyle: {
       outline: 'btn-outline',
       soft: 'btn-soft',
       dash: 'btn-dash',
       ghost: 'btn-ghost',
-      link: 'btn-link'
-    }
-  }
+      link: 'btn-link',
+    },
+  },
 })
 
 function Button({

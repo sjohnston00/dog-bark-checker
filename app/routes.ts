@@ -9,5 +9,5 @@ export default [
   route('/devices/:id', 'routes/devices.$id.tsx'),
 
   // Recordings
-  route('/recordings', 'routes/recordings.index.tsx')
+  route('/recordings', 'routes/recordings.index.tsx'),
 ] satisfies RouteConfig

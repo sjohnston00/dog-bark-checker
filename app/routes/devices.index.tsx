@@ -11,7 +11,7 @@ export async function loader({ request }: Route.LoaderArgs) {
   const devices = devicesRepo.getAll()
 
   return data({
-    devices
+    devices,
   })
 }
 

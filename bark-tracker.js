@@ -164,7 +164,7 @@ class BarkDetector {
       spectralCentroidMin: 500,
       spectralCentroidMax: 3000,
       spectralRolloffMin: 1000,
-      spectralRolloffMax: 8000
+      spectralRolloffMax: 8000,
     }
   }
 
@@ -191,7 +191,7 @@ class BarkDetector {
       isBark,
       confidence,
       timestamp,
-      features
+      features,
     }
   }
 
@@ -264,7 +264,7 @@ class RTSPProcessor {
       '0', // Use all cores
       '-f',
       'wav',
-      'pipe:1'
+      'pipe:1',
     ])
 
     let wavHeader = true
@@ -337,7 +337,7 @@ class RTSPProcessor {
       result.timestamp,
       result.confidence,
       source,
-      JSON.stringify(result.features)
+      JSON.stringify(result.features),
     ])
 
     stmt.finalize()
@@ -375,7 +375,7 @@ class FileProcessor {
       '-ac',
       '1',
       '-y', // Overwrite output file
-      tempAudioPath
+      tempAudioPath,
     ])
 
     await new Promise((resolve, reject) => {
@@ -479,7 +479,7 @@ class FileProcessor {
       result.confidence,
       timeOffset,
       source,
-      JSON.stringify(result.features)
+      JSON.stringify(result.features),
     ])
 
     stmt.finalize()
@@ -659,5 +659,5 @@ module.exports = {
   BarkDetector,
   RTSPProcessor,
   FileProcessor,
-  AudioAnalyzer
+  AudioAnalyzer,
 }

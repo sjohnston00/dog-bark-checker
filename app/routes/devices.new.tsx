@@ -17,7 +17,7 @@ export async function action({ request }: Route.ActionArgs) {
   if (!name) {
     return data(
       {
-        error: 'Name is required'
+        error: 'Name is required',
       },
       { status: 400 }
     )
@@ -26,7 +26,7 @@ export async function action({ request }: Route.ActionArgs) {
   if (!rtspUrl) {
     return data(
       {
-        error: 'RTSP URL is required'
+        error: 'RTSP URL is required',
       },
       { status: 400 }
     )
@@ -35,7 +35,7 @@ export async function action({ request }: Route.ActionArgs) {
   const deviceRepo = new DevicesRepository({ db: db })
   deviceRepo.create({
     name,
-    rtspUrl
+    rtspUrl,
   })
 
   throw redirect('/devices')

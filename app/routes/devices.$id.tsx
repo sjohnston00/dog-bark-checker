@@ -23,7 +23,7 @@ export async function loader({ params }: Route.LoaderArgs) {
   }
 
   return data({
-    device
+    device,
   })
 }
 
@@ -51,7 +51,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (!name) {
     return data(
       {
-        error: 'Name is required'
+        error: 'Name is required',
       },
       { status: 400 }
     )
@@ -60,7 +60,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   if (!rtspUrl) {
     return data(
       {
-        error: 'RTSP URL is required'
+        error: 'RTSP URL is required',
       },
       { status: 400 }
     )
@@ -69,7 +69,7 @@ export async function action({ request, params }: Route.ActionArgs) {
   const deviceRepo = new DevicesRepository({ db: db })
   deviceRepo.updateById(id, {
     name,
-    rtspUrl
+    rtspUrl,
   })
 
   throw redirect('/devices')

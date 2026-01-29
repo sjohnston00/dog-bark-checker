@@ -13,12 +13,12 @@ const headingVariants = cva('font-bold tracking-tight', {
       h3: 'text-3xl',
       h4: 'text-2xl',
       h5: 'text-xl',
-      h6: 'text-lg'
-    }
+      h6: 'text-lg',
+    },
   },
   defaultVariants: {
-    size: 'h1'
-  }
+    size: 'h1',
+  },
 })
 
 function Heading({
