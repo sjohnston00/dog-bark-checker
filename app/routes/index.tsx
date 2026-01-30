@@ -31,13 +31,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '~/components/ui/dialog'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '~/components/ui/dropdown-menu'
 import { Input } from '~/components/ui/input'
 import { Label } from '~/components/ui/label'
 import { Heading } from '~/components/ui/heading'
@@ -253,7 +246,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
           </DialogContent>
         </Dialog>
       </div>
-      <hr className='mb-8' />
+      <hr className='mb-8 text-base-content/30' />
       {loaderData.timePeriods.map((t) => {
         const duration = formatDuration(
           intervalToDuration({
@@ -268,43 +261,38 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                 {formatDate(t.start, 'EEE do LLL HH:mm')} -{' '}
                 {formatDate(t.end, 'HH:mm')}
               </Heading>
-              <Dialog>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      btnStyle={'ghost'}
-                      aria-label='Open time period dropdown menu'
-                    >
-                      <EllipsisVerticalIcon />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side='left' align='start'>
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+              <Button
+                btnStyle={'ghost'}
+                popoverTarget={`time-period-actions-popover-${t.id}`}
+                style={
+                  {
+                    anchorName: `time-period-actions-popover-anchor-${t.id}`,
+                  } as React.CSSProperties
+                }
+              >
+                <EllipsisVerticalIcon className='size=4' />
+              </Button>
+
+              <ul
+                className='dropdown dropdown-end menu w-52 rounded-box bg-base-200 shadow-sm'
+                popover='auto'
+                id={`time-period-actions-popover-${t.id}`}
+                style={
+                  {
+                    positionAnchor: `time-period-actions-popover-anchor-${t.id}`,
+                  } as React.CSSProperties
+                }
+              >
+                <li className='menu-title'>Actions</li>
+                <li>
+                  <Dialog>
                     <DialogTrigger asChild>
-                      <DropdownMenuItem
-                        variant='default'
-                        onClick={() => {
-                          setDialogState('edit')
-                        }}
-                      >
+                      <Button btnStyle={'ghost'} className='justify-start'>
                         Edit
-                      </DropdownMenuItem>
+                      </Button>
                     </DialogTrigger>
-                    <DialogTrigger asChild>
-                      <DropdownMenuItem
-                        variant='destructive'
-                        onClick={() => {
-                          setDialogState('delete')
-                        }}
-                      >
-                        Delete
-                      </DropdownMenuItem>
-                    </DialogTrigger>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <DialogContent>
-                  {dialogState === 'edit' ? (
-                    <>
+                    <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Edit Time Period</DialogTitle>
                       </DialogHeader>
@@ -378,9 +366,21 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                           </DialogClose>
                         </DialogFooter>
                       </Form>
-                    </>
-                  ) : (
-                    <>
+                    </DialogContent>
+                  </Dialog>
+                </li>
+                <li>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant='error'
+                        btnStyle={'ghost'}
+                        className='justify-start'
+                      >
+                        Delete
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Are you absolutely sure?</DialogTitle>
                         <DialogDescription>
@@ -415,10 +415,10 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                           </DialogClose>
                         </DialogFooter>
                       </Form>
-                    </>
-                  )}
-                </DialogContent>
-              </Dialog>
+                    </DialogContent>
+                  </Dialog>
+                </li>
+              </ul>
             </div>
             <div className='grid grid-cols-1 lg:grid-cols-2 mt-4 gap-4'>
               <Card className='bg-base-200'>
@@ -444,6 +444,9 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                       />
                       <ChartTooltip
                         accessibilityLayer
+                        cursor={{
+                          fillOpacity: 0.1,
+                        }}
                         content={
                           <ChartTooltipContent
                             labelFormatter={(_, payload) => {
@@ -455,7 +458,11 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                           />
                         }
                       />
-                      <CartesianGrid vertical={false} strokeDasharray={4} />
+                      <CartesianGrid
+                        vertical={false}
+                        strokeOpacity={0.3}
+                        strokeDasharray={4}
+                      />
                       <Bar
                         isAnimationActive={false}
                         dataKey='count'
@@ -509,7 +516,7 @@ export default function IndexPage({ loaderData }: Route.ComponentProps) {
                 </Card>
               </div>
             </div>
-            <hr className='mt-4' />
+            <hr className='mt-4 text-base-content/30' />
           </div>
         )
       })}
