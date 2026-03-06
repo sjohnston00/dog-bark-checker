@@ -317,8 +317,7 @@ class EnhancedFileProcessor {
               this.detectionCount++
               this.saveBarkDetection(result, this.filePath, timeOffset)
               console.log(
-                `🐕 Final bark at ${timeOffset.toFixed(1)}s (${
-                  result.modelUsed
+                `🐕 Final bark at ${timeOffset.toFixed(1)}s (${result.modelUsed
                 })`
               )
             }
@@ -496,8 +495,7 @@ async function main() {
             console.log('\nRecent Activity:')
             rows.slice(0, 10).forEach((row) => {
               console.log(
-                `${row.date} | ${row.model_used || 'unknown'} | ${
-                  row.source
+                `${row.date} | ${row.model_used || 'unknown'} | ${row.source
                 }: ${row.daily_count} detections`
               )
             })
@@ -613,8 +611,7 @@ function exportResults(db, format = 'txt') {
           .concat(
             rows.map(
               (row) =>
-                `${row.timestamp},${row.confidence},${row.duration || ''},${
-                  row.source
+                `${row.timestamp},${row.confidence},${row.duration || ''},${row.source
                 },${row.model_used || ''},${row.created_at}`
             )
           )

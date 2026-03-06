@@ -8,42 +8,50 @@ Coco is really bad at being left home alone and being in a semi detached propert
 
 ## TODOs
 
-- create recordings DB table
-  - id
-  - date
-  - startTime
-  - endTime (will be NULL if the status is "recording")
-  - notes
-  - createdAt
-  - status
-  - updatedAt
-  - modelUsed
+✅ create recordings DB table
+
+- id
+- date
+- startTime
+- endTime (will be NULL if the status is "recording")
+- notes
+- createdAt
+- status
+- updatedAt
+- modelUsed
 - get recordings from DB
 
-- create table for detections
-  - id
-  - timestamp
-  - confidence
-  - duration
-  - source
-  - modelUsed
-  - audioFeatures
-  - ensembleInfo
-  - createdAt
-  - recordingId (foreignKey)
-- add dialog for creating new recording
+✅ create table for detections
+
+- id
+- timestamp
+- confidence
+- duration
+- source
+- modelUsed
+- audioFeatures
+- ensembleInfo
+- createdAt
+- recordingId (foreignKey)
+
+✅ add dialog for creating new recording
+
 - add dialog to amend recording
-- create DB table for devices
-  - id
-  - name
-  - rtspUrl
-  - createdDate
-  - updatedDate
-  - enabled
-- add page for creating devices
-- add page for update a device
-- add ability to delete a device
-- when creating a recording assign it to a device
+
+✅ create DB table for devices
+
+- id
+- name
+- rtspUrl
+- createdDate
+- updatedDate
+- enabled
+
+✅ add page for creating devices
+✅ add page for update a device
+✅ add ability to delete a device
+✅ when creating a recording assign it to a device
+
 - live recording
   - start recording button
   - will initiate the `enhanced-bark-tracker.cjs` script
