@@ -10,4 +10,5 @@ export default [
 
   // Recordings
   route('/recordings', 'routes/recordings.index.tsx'),
+  route('/recordings/:id', 'routes/recordings.$id.tsx'),
 ] satisfies RouteConfig

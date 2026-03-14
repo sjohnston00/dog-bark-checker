@@ -14,7 +14,7 @@ export default class RecordingsRepository {
   }
 
   getById(id: number) {
-    const stmt = this.db.prepare('SELECT * FROM recordings WHERE id = ?')
+    const stmt = this.db.prepare<[number], any>('SELECT * FROM recordings WHERE id = ?')
     return stmt.get(id)
   }
 
