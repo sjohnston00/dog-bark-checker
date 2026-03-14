@@ -16,7 +16,7 @@ import DevicesRepository from '~/utils/DevicesRepository.server'
 import { data, Form, Link } from 'react-router'
 import { Label } from '~/components/ui/label'
 import RecordingsRepository from '~/utils/RecordingsRepository.server'
-import { BanIcon, CircleStop, EyeIcon } from 'lucide-react'
+import { BanIcon, CircleStop, EyeIcon, TriangleAlertIcon } from 'lucide-react'
 import { createSession, stopRecording } from '~/utils/recordingsMap.server'
 import { formatDuration, intervalToDuration } from 'date-fns'
 import StatusBadge from '~/components/ui/statusBadge'
@@ -126,10 +126,12 @@ export default function Page({ loaderData }: Route.ComponentProps) {
           </DialogHeader>
           <p>Would you like to start recording a session on a device?</p>
           <Form method='post' id='start-recording-form'>
+            {devices.length === 0 ? <div className='alert alert-error my-4'><TriangleAlertIcon className='size-6'/> <span>You need at least 1 device setup before starting a recording</span></div> : null}
             <Label>Device</Label>
             <select
               name='deviceId'
               className='select w-full mt-2 mb-4'
+              disabled={devices.length === 0}
               required
             >
               {devices.map((device: any) => (
@@ -148,6 +150,7 @@ export default function Page({ loaderData }: Route.ComponentProps) {
             </DialogClose>
             <DialogClose asChild>
               <Button
+                disabled={devices.length === 0}
                 type='submit'
                 form='start-recording-form'
                 name='_action'
