@@ -58,7 +58,7 @@ export default function Page({ actionData }: Route.ComponentProps) {
         </div>
         <div>
           <Label htmlFor='rtspUrl'>RTSP URL</Label>
-          <Input name='rtspUrl' id='rtspUrl' type='text' required />
+          <Input name='rtspUrl' id='rtspUrl' type='text' placeholder='rtsp://<username>:<password>@<ip-address>/' required />
         </div>
         <div className='flex items-center gap-2 mt-4'>
           <Link className='btn btn-ghost flex-1' to={'/devices'}>
