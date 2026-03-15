@@ -1,5 +1,5 @@
 import { type Database } from 'better-sqlite3'
-import type { Recording } from './db.server'
+import type { Recording, RecordingLog } from './db.server'
 import type { PickTuple } from '~/types/helpers'
 
 
@@ -18,7 +18,14 @@ export default class RecordingsRepository {
 
   getById(id: number) {
     const stmt = this.db.prepare<[number], Recording>('SELECT * FROM recordings WHERE id = ?')
-    return stmt.get(id)
+    const r = stmt.get(id)
+
+    const logsStmt = this.db.prepare<[number], RecordingLog>('SELECT * FROM recording_logs WHERE recordingId = ?')
+    const logs = logsStmt.all(id)
+    return {
+      ...r,
+      logs
+    }
   }
 
 
@@ -46,7 +53,7 @@ export default class RecordingsRepository {
       endTime?: string | null
       filePath?: string | null
       notes?: string | null
-      status?: 'pending' | 'completed' | 'cancelled'
+      status?: Recording['status']
       modelUsed?: string | null
     }
   ) {
@@ -67,5 +74,18 @@ export default class RecordingsRepository {
   delete(id: number) {
     const stmt = this.db.prepare('DELETE FROM recordings WHERE id = ?')
     stmt.run(id)
+  }
+
+  appendLog({ text, recordingId, level }: Pick<RecordingLog, 'text' | 'recordingId' | 'level'>) {
+    const stmt = this.db.prepare<[string, number, string], never>(
+      `INSERT INTO recording_logs (text, recordingId, level) 
+       VALUES (?, ?, ?)`
+    )
+    const result = stmt.run(
+      text,
+      recordingId,
+      level
+    )
+    return result.lastInsertRowid as number
   }
 }

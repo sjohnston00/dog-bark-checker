@@ -148,9 +148,8 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         </CardContent>
       </Card>
       <Heading size={'h2'} className='mt-4'>Logs</Heading>
-      <pre className='p-4 rounded shadow bg-base-200 min-h-100 mt-4'>
-        2026-01-01 01:01 script started<br />
-        2026-01-01 01:02 script ended
+      <pre className='p-4 rounded shadow bg-base-200 min-h-100 mt-4 w-full overflow-auto'>
+        {recording.logs.map(l => <span className='bg-error/20 p-1'>[{l.createdAt}] - {l.text}</span>)}
       </pre>
     </div>
   )

@@ -18,17 +18,19 @@ export function createSession(recordingId: number, rtspUrl: string) {
   ])
 
   process.stdout.on('data', (data) => {
-    console.log(`[Recording ${recordingId}]: ${data}`)
+    recordingsRepo.appendLog({ text: data.toString(), recordingId, level: 'stdout' })
+    // console.log(`[Recording ${recordingId}]: ${data}`)
   })
   process.stderr.on('data', (data) => {
-    console.error(`[Recording ${recordingId}] Error: ${data}`)
+    recordingsRepo.appendLog({ text: data.toString(), recordingId, level: 'stderr' })
+    // console.error(`[Recording ${recordingId}] Error: ${data}`)
   })
 
   process.on('close', (code) => {
-    console.error(`[Recording ${recordingId}] Exited with code ${code}`)
+    recordingsRepo.appendLog({ text: `Exited with code ${code}`, recordingId, level: 'stdout' })
 
     recordingsRepo.update(recordingId, {
-      status: 'completed',
+      status: code !== 0 ? 'failed' : 'completed',
       endTime: new Date().toISOString(),
     })
 

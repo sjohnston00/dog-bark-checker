@@ -46,6 +46,16 @@ db.exec(`CREATE TABLE IF NOT EXISTS devices (
             enabled INTEGER DEFAULT 1
         )`)
 
+db.exec(`CREATE TABLE IF NOT EXISTS recording_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recordingId INTEGER NOT NULL,
+            text TEXT NOT NULL,
+            level TEXT NOT NULL DEFAULT 'stdout',
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY(recordingId) REFERENCES recordings(id)
+        )`)
+
 export type RecordingStatus = 'pending' | 'completed' | 'failed' | 'cancelled'
 
 export type Recording = {
@@ -69,6 +79,15 @@ export type Device = {
   createdAt: string
   updatedAt: string
   enabled: number
+}
+
+export type RecordingLog = {
+  id: number;
+  recordingId: number;
+  text: string;
+  level: 'stdout' | 'stderr';
+  createdAt: string;
+
 }
 
 export default db
