@@ -39,6 +39,8 @@ export function createSession(recordingId: number, rtspUrl: string) {
     process,
     startTime: new Date(),
   })
+
+  return process
 }
 
 export function stopRecording(recordingId: number) {

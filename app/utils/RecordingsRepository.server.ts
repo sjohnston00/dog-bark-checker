@@ -1,4 +1,7 @@
 import { type Database } from 'better-sqlite3'
+import type { Recording } from './db.server'
+import type { PickTuple } from '~/types/helpers'
+
 
 export default class RecordingsRepository {
   private db: Database
@@ -6,29 +9,21 @@ export default class RecordingsRepository {
     this.db = args.db
   }
 
-  getAll() {
-    const stmt = this.db.prepare(
+  getAll(): Recording[] {
+    const stmt = this.db.prepare<[], Recording>(
       'SELECT * FROM recordings ORDER BY date DESC, startTime DESC'
     )
     return stmt.all()
   }
 
   getById(id: number) {
-    const stmt = this.db.prepare<[number], any>('SELECT * FROM recordings WHERE id = ?')
+    const stmt = this.db.prepare<[number], Recording>('SELECT * FROM recordings WHERE id = ?')
     return stmt.get(id)
   }
 
-  create(recording: {
-    date: string
-    startTime: string
-    deviceId: number
-    endTime?: string | null
-    filePath?: string | null
-    notes?: string | null
-    status?: 'pending' | 'completed' | 'failed'
-    modelUsed?: string | null
-  }) {
-    const stmt = this.db.prepare(
+
+  create(recording: Pick<Recording, 'date' | 'startTime' | 'deviceId' | 'endTime' | 'filePath' | 'notes' | 'status' | 'modelUsed'>) {
+    const stmt = this.db.prepare<PickTuple<typeof recording, ['date', 'startTime', 'endTime', 'filePath', 'notes', 'status', 'modelUsed', 'deviceId']>, never>(
       `INSERT INTO recordings (date, startTime, endTime, filePath, notes, status, modelUsed, deviceId) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )

@@ -46,16 +46,16 @@ export default function Page({ loaderData }: Route.ComponentProps) {
   //TODO: create a hook for revalidating the data from an SSE event
   return (
     <div className='pb-24'>
-      <Heading>Recordings ID</Heading>
+      <Heading>Recording {recording.id}</Heading>
       <div className='alert alert-soft my-4'>
         <span>View a recordings details.</span>
       </div>
 
       <div className="grid grid-cols-2 my-4 gap-4">
-        <span className='text-base-content/60'>device</span>
-        <span>device-name</span>
         <span className='text-base-content/60'>status</span>
         <span className={twMerge('badge font-mono', recording.status === 'completed' ? 'badge-success' : 'badge-warning')}>{loaderData.recording.status}</span>
+        <span className='text-base-content/60'>device</span>
+        <span>device-name</span>
         <span className='text-base-content/60'>created</span>
         <span>{recording.startTime}</span>
         <span className='text-base-content/60'>ended</span>
