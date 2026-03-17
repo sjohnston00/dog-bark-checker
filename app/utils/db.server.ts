@@ -56,6 +56,21 @@ db.exec(`CREATE TABLE IF NOT EXISTS recording_logs (
             FOREIGN KEY(recordingId) REFERENCES recordings(id)
         )`)
 
+db.exec(`CREATE TABLE IF NOT EXISTS recording_barks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            recordingId INTEGER NOT NULL,
+            timestamp TEXT NOT NULL,
+            confidence REAL NOT NULL,
+            duration REAL,
+            source TEXT NOT NULL,
+            model_used TEXT,
+            audio_features TEXT,
+            ensemble_info TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+            FOREIGN KEY(recordingId) REFERENCES recordings(id)
+        )`)
+
 export type RecordingStatus = 'pending' | 'completed' | 'failed' | 'cancelled'
 
 export type Recording = {
@@ -82,12 +97,11 @@ export type Device = {
 }
 
 export type RecordingLog = {
-  id: number;
-  recordingId: number;
-  text: string;
-  level: 'stdout' | 'stderr';
-  createdAt: string;
-
+  id: number
+  recordingId: number
+  text: string
+  level: 'stdout' | 'stderr'
+  createdAt: string
 }
 
 export default db

@@ -4,10 +4,19 @@ import db from '~/utils/db.server'
 import RecordingsRepository from '~/utils/RecordingsRepository.server'
 import type { Route } from './+types/recordings.$id'
 import { Card, CardContent, CardTitle } from '~/components/ui/card'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '~/components/ui/chart'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from '~/components/ui/chart'
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 import { formatDate } from 'date-fns'
 import { twMerge } from 'tailwind-merge'
+import type { Detection } from '~/types/db'
+import {
+  aggregateByDetectionsMinute,
+  type AggregatedByMinuteDetection,
+} from '~/utils/detections-transforms.server'
 
 export async function loader({ params }: Route.LoaderArgs) {
   const recordingId = Number(params.id)
@@ -19,14 +28,36 @@ export async function loader({ params }: Route.LoaderArgs) {
   const recording = recordingsRepo.getById(recordingId)
 
   if (!recording) {
-    throw data({ message: "Recording not found" }, { status: 404 })
+    throw data({ message: 'Recording not found' }, { status: 404 })
   }
 
+  console.log(recording)
 
-  console.log(recording);
+  let barks: (Detection & { recordingId: number })[] = []
+
+  let barksAggregatedByMinute: AggregatedByMinuteDetection[] = []
+
+  if (recording.status === 'completed' || recording.status === 'pending') {
+    barks = db
+      .prepare<
+        [number],
+        Detection & { recordingId: number }
+      >('SELECT * FROM recording_barks WHERE recordingId = ? ORDER BY timestamp DESC')
+      .all(recordingId)
+
+    barksAggregatedByMinute = aggregateByDetectionsMinute(
+      barks,
+      new Date(recording.startTime!),
+      recording.endTime ? new Date(recording.endTime) : new Date()
+    )
+  }
+  console.log(barks)
+  console.log(barksAggregatedByMinute)
 
   return data({
     recording,
+    barks,
+    barksAggregatedByMinute,
   })
 }
 
@@ -34,14 +65,11 @@ export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData()
   const formAction = formData.get('_action')?.toString()
 
-
-  return data({
-
-  })
+  return data({})
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-  const { recording } = loaderData
+  const { recording, barksAggregatedByMinute, barks } = loaderData
 
   //TODO: create a hook for revalidating the data from an SSE event
   return (
@@ -51,9 +79,16 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         <span>View a recordings details.</span>
       </div>
 
-      <div className="grid grid-cols-2 my-4 gap-4">
+      <div className='grid grid-cols-2 my-4 gap-4'>
         <span className='text-base-content/60'>status</span>
-        <span className={twMerge('badge font-mono', recording.status === 'completed' ? 'badge-success' : 'badge-warning')}>{loaderData.recording.status}</span>
+        <span
+          className={twMerge(
+            'badge font-mono',
+            recording.status === 'completed' ? 'badge-success' : 'badge-warning'
+          )}
+        >
+          {loaderData.recording.status}
+        </span>
         <span className='text-base-content/60'>device</span>
         <span>device-name</span>
         <span className='text-base-content/60'>created</span>
@@ -62,28 +97,22 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         <span>{recording.endTime}</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-8 my-4">
+      <div className='grid grid-cols-3 gap-8 my-4'>
         <Card className='bg-base-200'>
           <CardContent>
-            <CardTitle>
-              Barks
-            </CardTitle>
-            <span>0</span>
+            <CardTitle>Barks</CardTitle>
+            <span>{barks.length}</span>
           </CardContent>
         </Card>
         <Card className='bg-base-200'>
           <CardContent>
-            <CardTitle>
-              Last Barked
-            </CardTitle>
+            <CardTitle>Last Barked</CardTitle>
             <span>3 minutes ago</span>
           </CardContent>
         </Card>
         <Card className='bg-base-200'>
           <CardContent>
-            <CardTitle>
-              Time To First Bark
-            </CardTitle>
+            <CardTitle>Time To First Bark</CardTitle>
             <span>10 seconds</span>
           </CardContent>
         </Card>
@@ -92,9 +121,14 @@ export default function Page({ loaderData }: Route.ComponentProps) {
       <code>This will be a live chart of the recording with SSE updates</code>
       <Card className='bg-base-200'>
         <CardContent>
-          <CardTitle>
-            Barks Per Minute (<abbr title='Barks per minute'>BPM</abbr>)
-          </CardTitle>
+          <div className='flex items-center gap-4'>
+            <CardTitle>
+              Barks Per Minute (<abbr title='Barks per minute'>BPM</abbr>)
+            </CardTitle>
+            <span className='text-sm text-base-content/60'>
+              Last Updated 1 minute ago
+            </span>
+          </div>
           <ChartContainer
             config={{
               count: {
@@ -102,9 +136,9 @@ export default function Page({ loaderData }: Route.ComponentProps) {
                 color: '#2563eb',
               },
             }}
-            className='min-h-[200px] w-full select-none'
+            className='h-96 select-none'
           >
-            <BarChart accessibilityLayer data={[]}>
+            <BarChart accessibilityLayer data={barksAggregatedByMinute}>
               <XAxis
                 dataKey='minute'
                 tickLine={false}
@@ -147,9 +181,15 @@ export default function Page({ loaderData }: Route.ComponentProps) {
           </ChartContainer>
         </CardContent>
       </Card>
-      <Heading size={'h2'} className='mt-4'>Logs</Heading>
+      <Heading size={'h2'} className='mt-4'>
+        Logs
+      </Heading>
       <pre className='p-4 rounded shadow bg-base-200 min-h-100 mt-4 w-full overflow-auto'>
-        {recording.logs.map(l => <span className='bg-error/20 p-1'>[{l.createdAt}] - {l.text}</span>)}
+        {recording.logs.map((l) => (
+          <span className='bg-error/20 p-1'>
+            [{l.createdAt}] - {l.text}
+          </span>
+        ))}
       </pre>
     </div>
   )
@@ -160,9 +200,13 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   if (isRouteErrorResponse(error)) {
     message = error.data.message
   }
-  return <div className="">
-    <Heading>Recordings ID</Heading>
-    <Link to={'/recordings'} className='btn'>Back</Link>
-    <div className='alert alert-error my-4'>{message}</div>
-  </div>
+  return (
+    <div className=''>
+      <Heading>Recordings ID</Heading>
+      <Link to={'/recordings'} className='btn'>
+        Back
+      </Link>
+      <div className='alert alert-error my-4'>{message}</div>
+    </div>
+  )
 }
