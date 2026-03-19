@@ -177,9 +177,5 @@ export default class RtspProcessor {
     setImmediate(() => {
       this.emitter.removeAllListeners()
     })
-    this.recordingsRepo.update(this.recordingId, {
-      status: 'completed',
-      endTime: new Date().toISOString(),
-    })
   }
 }

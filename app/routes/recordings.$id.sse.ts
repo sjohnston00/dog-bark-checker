@@ -2,6 +2,7 @@ import { data } from 'react-router'
 import RecordingsRepository from '~/utils/RecordingsRepository.server'
 import db from '~/utils/db.server'
 import type { Route } from './+types/recordings.$id.sse'
+import { recordingsMap } from '~/utils/recordingsMap.server'
 
 function encode({ event, data }: { event: string; data: Record<string, any> }) {
   const encoder = new TextEncoder()
@@ -21,8 +22,17 @@ export async function loader({ params }: Route.LoaderArgs) {
     throw data({ message: 'Recording not found' }, { status: 404 })
   }
 
+  //if it's completed return a status 410 - Gone which means the resource WAS here but now it's finished
+  if (recording.status !== 'pending') {
+    throw data({ message: 'Recording already finished' }, { status: 410 })
+  }
+
+  const recordingSession = recordingsMap.get(recordingId)
+  if (!recordingSession) {
+    throw data({ message: 'Live recording not found' }, { status: 404 })
+  }
+
   //TODO: get the recordingMap and the current live recording if it's still pending
-  //TODO: if it's complete return a status 410 - Gone which means the resource WAS here but now it's finished
 
   const stream = new ReadableStream({
     start(controller) {
@@ -34,20 +44,67 @@ export async function loader({ params }: Route.LoaderArgs) {
           },
         })
       )
-      setInterval(() => {
-        controller.enqueue(
-          encode({
-            event: 'ping',
-            data: {
-              date: new Date(),
-            },
-          })
-        )
-      }, 1000)
 
-      return () => {
-        console.log('cleanup function')
+      const onData = (payload: unknown) => {
+        try {
+          controller.enqueue(
+            encode({ event: 'data', data: payload as Record<string, any> })
+          )
+        } catch {
+          // Controller already closed (client disconnected)
+        }
       }
+
+      const onError = (payload: unknown) => {
+        try {
+          controller.enqueue(
+            encode({ event: 'error', data: payload as Record<string, any> })
+          )
+        } catch {}
+        cleanup()
+        controller.close()
+      }
+
+      const onEnd = (payload: unknown) => {
+        try {
+          controller.enqueue(
+            encode({ event: 'end', data: payload as Record<string, any> })
+          )
+        } catch {}
+        cleanup()
+        controller.close()
+      }
+      const pingInterval = setInterval(() => {
+        try {
+          controller.enqueue(
+            encode({
+              event: 'ping',
+              data: {
+                date: new Date(),
+              },
+            })
+          )
+        } catch {
+          // Controller already closed (client disconnected)
+          cleanup()
+          controller.close()
+        }
+      }, 5_000)
+
+      recordingSession.emitter.on('stream', onData)
+      recordingSession.emitter.on('bark', onData)
+      recordingSession.emitter.once('error', onError)
+      recordingSession.emitter.once('end', onEnd)
+
+      function cleanup() {
+        clearInterval(pingInterval)
+        recordingSession!.emitter.off('stream', onData)
+        recordingSession!.emitter.off('error', onError)
+        recordingSession!.emitter.off('end', onEnd)
+      }
+
+      // React Router will call this when the client disconnects
+      return cleanup
     },
   })
 

@@ -1,5 +1,11 @@
 import { formatDate } from 'date-fns'
-import { data, isRouteErrorResponse, Link } from 'react-router'
+import {
+  data,
+  Form,
+  isRouteErrorResponse,
+  Link,
+  useRevalidator,
+} from 'react-router'
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
 import { twMerge } from 'tailwind-merge'
 import { Card, CardContent, CardTitle } from '~/components/ui/card'
@@ -17,6 +23,10 @@ import {
 } from '~/utils/detections-transforms.server'
 import RecordingsRepository from '~/utils/RecordingsRepository.server'
 import type { Route } from './+types/recordings.$id'
+import { useEffect, useRef } from 'react'
+import { Button } from '~/components/ui/button'
+import { BanIcon, CircleStop } from 'lucide-react'
+import { stopRecording } from '~/utils/recordingsMap.server'
 
 export async function loader({ params }: Route.LoaderArgs) {
   const recordingId = Number(params.id)
@@ -54,23 +64,115 @@ export async function loader({ params }: Route.LoaderArgs) {
     recording,
     barks,
     barksAggregatedByMinute,
+    isCurrentlyRecording: recording.status === 'pending',
   })
 }
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request, params }: Route.ActionArgs) {
+  const recordingId = Number(params.id)
+
+  if (!recordingId || recordingId < 0) {
+    throw data({ message: 'Invalid recording ID' }, { status: 400 })
+  }
+  const recordingsRepo = new RecordingsRepository({ db: db })
+  const recording = recordingsRepo.getById(recordingId)
+
+  if (!recording) {
+    throw data({ message: 'Recording not found' }, { status: 404 })
+  }
   const formData = await request.formData()
   const formAction = formData.get('_action')?.toString()
 
-  return data({})
+  switch (formAction) {
+    case 'stop-recording':
+      recordingsRepo.update(recordingId, {
+        status: 'completed',
+        endTime: new Date().toISOString(),
+      })
+      stopRecording(recordingId)
+
+      //await 1 second to ensure the process has stopped
+      await new Promise((res, rej) => setTimeout(res, 1000))
+
+      return null
+    case 'cancel-recording':
+      recordingsRepo.update(recordingId, {
+        status: 'cancelled',
+      })
+      return null
+    default:
+      throw data('not a valid form action', { status: 400 })
+  }
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-  const { recording, barksAggregatedByMinute, barks } = loaderData
+  const { recording, barksAggregatedByMinute, barks, isCurrentlyRecording } =
+    loaderData
+  const esRef = useRef<EventSource | null>(null)
+  const { revalidate } = useRevalidator()
 
-  //TODO: create a hook for revalidating the data from an SSE event
+  useEffect(() => {
+    const es = new EventSource(`/recordings/${recording.id}/sse`)
+    esRef.current = es
+
+    es.addEventListener('data', (e) => {
+      try {
+        const data = JSON.parse(e.data)
+        // console.log(data)
+
+        // if (data.db) {
+        //   setCurrentVolume(100 - Math.abs(data.db))
+        // }
+      } catch (error) {
+        console.error('Failed to parse JSON from SSE')
+      }
+    })
+    es.addEventListener('ping', (e) => {
+      revalidate()
+    })
+
+    es.addEventListener('error', (e) => {
+      es.close()
+    })
+    es.addEventListener('end', () => {
+      es.close()
+      esRef.current = null
+    })
+
+    return () => {
+      es.close()
+      esRef.current = null
+    }
+  }, [])
+
   return (
     <div className='pb-24'>
-      <Heading>Recording {recording.id}</Heading>
+      <div className='flex flex-col lg:flex-row justify-between items-center gap-4'>
+        <Heading>Recording {recording.id}</Heading>
+        {isCurrentlyRecording ? (
+          <Form method='post' className='flex items-center gap-2'>
+            <Button
+              type='submit'
+              name='_action'
+              value='stop-recording'
+              btnStyle={'outline'}
+              variant={'error'}
+              title='Stop'
+            >
+              <CircleStop />
+            </Button>
+            <Button
+              type='submit'
+              name='_action'
+              value='cancel-recording'
+              variant={'error'}
+              title='Cancel'
+            >
+              <BanIcon />
+            </Button>
+          </Form>
+        ) : null}
+      </div>
       <div className='alert alert-soft my-4'>
         <span>View a recordings details.</span>
       </div>
@@ -114,7 +216,6 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         </Card>
       </div>
 
-      <code>This will be a live chart of the recording with SSE updates</code>
       <Card className='bg-base-200'>
         <CardContent>
           <div className='flex items-center gap-4'>
@@ -177,16 +278,13 @@ export default function Page({ loaderData }: Route.ComponentProps) {
           </ChartContainer>
         </CardContent>
       </Card>
-      <Heading size={'h2'} className='mt-4'>
-        Logs
-      </Heading>
-      <pre className='p-4 rounded shadow bg-base-200 min-h-100 h-full mt-4 w-full overflow-auto'>
-        {recording.logs.map((l) => (
-          <span key={l.id} className='bg-error/20 p-1 block mt-px w-full'>
-            [{l.createdAt}] - {l.text}
-          </span>
-        ))}
-      </pre>
+      <Link
+        to={`/recordings/${recording.id}/logs`}
+        className='btn mt-4'
+        target='_blank'
+      >
+        View Logs
+      </Link>
     </div>
   )
 }

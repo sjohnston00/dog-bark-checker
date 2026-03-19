@@ -21,16 +21,15 @@ export default class RecordingsRepository {
     )
     const r = stmt.get(id)
 
-    if (!r) return
+    return r
+  }
 
+  getLogs(id: number) {
     const logsStmt = this.db.prepare<[number], RecordingLog>(
       'SELECT * FROM recording_logs WHERE recordingId = ?'
     )
     const logs = logsStmt.all(id)
-    return {
-      ...r,
-      logs,
-    }
+    return logs
   }
 
   create(
