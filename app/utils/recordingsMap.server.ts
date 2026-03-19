@@ -1,51 +1,54 @@
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import EventEmitter from 'node:events'
+import RtspProcessor from '~/lib/rtspProcessor.server'
+import YAMNetBarkDetector from '~/lib/tensorflow-models.server'
 import db from './db.server'
-import RecordingsRepository from './RecordingsRepository.server'
 
-export const recordingsMap = new Map<
-  number,
-  { process: ChildProcessWithoutNullStreams; startTime: Date }
->()
+type RecordingSession = {
+  rtspProcessor: RtspProcessor
+  startTime: Date
+  emitter: EventEmitter
+  stop: () => void
+}
 
-export function createSession(recordingId: number, rtspUrl: string) {
+export const recordingsMap = new Map<number, RecordingSession>()
+
+export async function createSession(recordingId: number, rtspUrl: string) {
   console.log('Starting recording process')
-  const recordingsRepo = new RecordingsRepository({ db: db })
+  const emitter = new EventEmitter()
+  emitter.setMaxListeners(50)
 
-  const process = spawn('node', [
-    'enhanced-bark-tracker.cjs',
-    'stream',
+  const detector = new YAMNetBarkDetector()
+  await detector.initModel()
+
+  const rtspProcessor = new RtspProcessor({
+    db,
+    emitter,
+    recordingId,
     rtspUrl,
-  ])
-
-  process.stdout.on('data', (data) => {
-    recordingsRepo.appendLog({ text: data.toString(), recordingId, level: 'stdout' })
-    // console.log(`[Recording ${recordingId}]: ${data}`)
-  })
-  process.stderr.on('data', (data) => {
-    recordingsRepo.appendLog({ text: data.toString(), recordingId, level: 'stderr' })
-    // console.error(`[Recording ${recordingId}] Error: ${data}`)
+    detector: detector,
   })
 
-  process.on('close', (code) => {
-    recordingsRepo.appendLog({ text: `Exited with code ${code}`, recordingId, level: 'stdout' })
+  rtspProcessor.start()
 
-    recordingsRepo.update(recordingId, {
-      status: code !== 0 ? 'failed' : 'completed',
-      endTime: new Date().toISOString(),
-    })
-
+  const stop = () => {
+    rtspProcessor.stop()
     recordingsMap.delete(recordingId)
-  })
+    console.log(`Session deleted now at ${recordingsMap.size} open sessions`)
+  }
 
   recordingsMap.set(recordingId, {
-    process,
+    rtspProcessor,
+    emitter: emitter,
+    stop: stop,
     startTime: new Date(),
   })
-
-  return process
 }
 
 export function stopRecording(recordingId: number) {
   const recording = recordingsMap.get(recordingId)
-  recording?.process.kill('SIGTERM')
+  if (!recording) {
+    console.error(`Recording ID: ${recordingId} not found in map`)
+    return
+  }
+  recording?.stop()
 }

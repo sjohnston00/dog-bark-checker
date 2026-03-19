@@ -61,12 +61,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS recording_barks (
             recordingId INTEGER NOT NULL,
             timestamp TEXT NOT NULL,
             confidence REAL NOT NULL,
-            duration REAL,
             source TEXT NOT NULL,
-            model_used TEXT,
-            audio_features TEXT,
-            ensemble_info TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            modelUsed TEXT,
+            audioFeatures TEXT,
+            ensembleInfo TEXT,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 
             FOREIGN KEY(recordingId) REFERENCES recordings(id)
         )`)
@@ -101,6 +100,18 @@ export type RecordingLog = {
   recordingId: number
   text: string
   level: 'stdout' | 'stderr'
+  createdAt: string
+}
+
+export type RecordingBark = {
+  id: number
+  recordingId: number
+  timestamp: string
+  confidence: number
+  source: string
+  modelUsed: string | null
+  audioFeatures: string | null
+  ensembleInfo: string | null
   createdAt: string
 }
 

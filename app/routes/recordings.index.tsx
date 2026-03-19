@@ -21,7 +21,7 @@ import { createSession, stopRecording } from '~/utils/recordingsMap.server'
 import { formatDuration, intervalToDuration } from 'date-fns'
 import StatusBadge from '~/components/ui/statusBadge'
 
-export async function loader({ }: Route.LoaderArgs) {
+export async function loader({}: Route.LoaderArgs) {
   const devicesRepo = new DevicesRepository({ db: db })
   const recordingsRepo = new RecordingsRepository({ db: db })
   const devices = devicesRepo.getAll()
@@ -103,7 +103,7 @@ export async function action({ request }: Route.ActionArgs) {
         deviceId,
       })
 
-      createSession(newRecordingId, device.rtspUrl)
+      await createSession(newRecordingId, device.rtspUrl)
 
       return null
     default:
@@ -130,7 +130,14 @@ export default function Page({ loaderData }: Route.ComponentProps) {
           </DialogHeader>
           <p>Would you like to start recording a session on a device?</p>
           <Form method='post' id='start-recording-form'>
-            {devices.length === 0 ? <div className='alert alert-error my-4'><TriangleAlertIcon className='size-6' /> <span>You need at least 1 device setup before starting a recording</span></div> : null}
+            {devices.length === 0 ? (
+              <div className='alert alert-error my-4'>
+                <TriangleAlertIcon className='size-6' />{' '}
+                <span>
+                  You need at least 1 device setup before starting a recording
+                </span>
+              </div>
+            ) : null}
             <Label>Device</Label>
             <select
               name='deviceId'
@@ -184,8 +191,8 @@ export default function Page({ loaderData }: Route.ComponentProps) {
             const device = devices.find((d) => d.id === r.deviceId)
             const duration = r.endTime
               ? formatDuration(
-                intervalToDuration({ start: r.startTime, end: r.endTime })
-              )
+                  intervalToDuration({ start: r.startTime, end: r.endTime })
+                )
               : null
             return (
               <tr

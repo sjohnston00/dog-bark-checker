@@ -1,16 +1,35 @@
 import type { Database } from 'better-sqlite3'
 import type YAMNetBarkDetector from './tensorflow-models.server'
 import { spawn, type ChildProcess } from 'node:child_process'
+import RecordingsRepository from '~/utils/RecordingsRepository.server'
+import type EventEmitter from 'node:events'
 
-export default class EnhancedRTSPProcessor {
+type RtspProcessorConstructorArgs = {
   rtspUrl: string
   detector: YAMNetBarkDetector
   db: Database
-  ffmpegProcess: ChildProcess | null
-  audioBuffer: Buffer[]
-  bufferSize: number
-  detectionCount: number
-  constructor(rtspUrl: string, detector: YAMNetBarkDetector, db: Database) {
+  recordingId: number
+  emitter: EventEmitter
+}
+
+export default class RtspProcessor {
+  private rtspUrl: string
+  private detector: YAMNetBarkDetector
+  private db: Database
+  private ffmpegProcess: ChildProcess | null
+  private audioBuffer: Buffer[]
+  private readonly bufferSize: number
+  private detectionCount: number
+  private recordingId: number
+  private recordingsRepo: RecordingsRepository
+  private emitter: EventEmitter
+  constructor({
+    rtspUrl,
+    detector,
+    db,
+    recordingId,
+    emitter,
+  }: RtspProcessorConstructorArgs) {
     this.rtspUrl = rtspUrl
     this.detector = detector
     this.db = db
@@ -18,14 +37,14 @@ export default class EnhancedRTSPProcessor {
     this.audioBuffer = []
     this.bufferSize = 16_000 // YAMNet prefers 16kHz
     this.detectionCount = 0
+    this.recordingId = recordingId
+    this.recordingsRepo = new RecordingsRepository({ db: this.db })
+    this.emitter = emitter
   }
 
   async start() {
-    console.log(
-      `🎥 Starting enhanced RTSP stream processing from: ${this.rtspUrl}`
-    )
+    console.log(`Starting RTSP stream processing fr: ${this.rtspUrl}`)
 
-    // Use 16kHz for better model compatibility
     this.ffmpegProcess = spawn('ffmpeg', [
       '-i',
       this.rtspUrl,
@@ -43,45 +62,66 @@ export default class EnhancedRTSPProcessor {
       'pipe:1',
     ])
 
-    let wavHeader = true
+    const HEADER_SIZE: number = 44
+    let isWavHeader = true
     let headerBuffer = Buffer.alloc(0)
 
-    this.ffmpegProcess.stdout!.on('data', (data) => {
-      if (wavHeader && headerBuffer.length < 44) {
+    this.ffmpegProcess.stdout!.on('data', (data: Buffer) => {
+      // Accumulate until we've consumed the full 44-byte WAV header
+      if (isWavHeader) {
         headerBuffer = Buffer.concat([headerBuffer, data])
-        if (headerBuffer.length >= 44) {
-          const remainingData = headerBuffer.slice(44)
-          if (remainingData.length > 0) {
-            this.processAudioData(remainingData)
-          }
-          wavHeader = false
-        }
-      } else {
-        this.processAudioData(data)
+        if (headerBuffer.length < HEADER_SIZE) return
+
+        // Slice off the header, keep the rest as PCM
+        data = headerBuffer.subarray(HEADER_SIZE)
+        headerBuffer = Buffer.alloc(0)
+        isWavHeader = false
+
+        if (data.length === 0) return
       }
+      this.processAudioData(data)
     })
 
-    this.ffmpegProcess.stderr!.on('data', (data) => {
+    this.ffmpegProcess.stderr!.on('data', (data: Buffer) => {
       const message = data.toString()
-      if (message.includes('Error') || message.includes('error')) {
-        console.error('FFmpeg error:', message)
-      }
+      this.recordingsRepo.appendLog({
+        level: 'stderr',
+        recordingId: this.recordingId,
+        text: message,
+      })
     })
 
-    this.ffmpegProcess.on('close', (code) => {
-      console.log(`FFmpeg process closed with code ${code}`)
+    this.ffmpegProcess.on('close', (code, signal) => {
+      this.recordingsRepo.appendLog({
+        level: 'stdout',
+        recordingId: this.recordingId,
+        text: `FFmpeg process closed (${signal}) with code ${code}`,
+      })
     })
   }
 
-  private processAudioData(data: any) {
-    const samples = []
+  private processAudioData(data: Buffer) {
+    // Each sample is 2 bytes, signed 16-bit little-endian (pcm_s16le)
+    const dataChunks = data.length / 2
+    let sumOfSquares = 0
+
+    const samples: number[] = []
+
+    //increment by 2
     for (let i = 0; i < data.length; i += 2) {
-      const sample = data.readInt16LE(i) / 32768.0
+      const sample = data.readInt16LE(i) / 32768 // normalise to -1..1
+      sumOfSquares += sample * sample
       samples.push(sample)
     }
+    const rms = Math.sqrt(sumOfSquares / dataChunks)
+    // Convert to dBFS — silence is -Infinity, full scale is 0
+    const decibels = 20 * Math.log10(rms)
+    this.emitter.emit('stream', { db: decibels })
 
-    this.audioBuffer.push(...samples)
+    //push the chunks into the audioBuffer
+    this.audioBuffer.push(Buffer.from(samples))
 
+    //when we have the audio buffer bigger then the buffer size, pipe the audio through detector
     while (this.audioBuffer.length >= this.bufferSize) {
       const chunk = this.audioBuffer.splice(0, this.bufferSize)
       const timestamp = new Date()
@@ -90,7 +130,7 @@ export default class EnhancedRTSPProcessor {
     }
   }
 
-  private async processAudioChunk(chunk, timestamp: Date) {
+  private async processAudioChunk(chunk: Buffer[], timestamp: Date) {
     try {
       const result = await this.detector.detectBark(chunk, timestamp)
       if (!result) {
@@ -100,46 +140,46 @@ export default class EnhancedRTSPProcessor {
 
       if (result.isBark) {
         this.detectionCount++
-        this.saveBarkDetection(result, 'rtsp_stream')
 
-        console.log(
-          `🐕 Bark #${this.detectionCount} detected at ${timestamp.toLocaleString()}`
-        )
-        console.log(
-          `   Model: ${result.modelUsed} | Confidence: ${(
+        this.recordingsRepo.saveBarkDetection({
+          recordingId: this.recordingId,
+          confidence: result.confidence,
+          modelUsed: result.modelUsed,
+          source: 'rtsp_stream',
+          timestamp: timestamp.toISOString(),
+        })
+        this.emitter.emit('bark', { result, timestamp })
+
+        this.recordingsRepo.appendLog({
+          level: 'stdout',
+          recordingId: this.recordingId,
+          text: `Bark #${this.detectionCount} detected at ${timestamp.toLocaleString()} Model: ${result.modelUsed} | Confidence: ${(
             result.confidence * 100
-          ).toFixed(1)}%`
-        )
+          ).toFixed(1)}%`,
+        })
       }
     } catch (error: unknown) {
-      console.error(error)
+      this.recordingsRepo.appendLog({
+        level: 'stderr',
+        recordingId: this.recordingId,
+        text: `Error processing audio chunk: ${String(error)}`,
+      })
     }
-  }
-
-  saveBarkDetection(result, source) {
-    const stmt = this.db.prepare<any[], any>(`
-            INSERT INTO detections (timestamp, confidence, source, model_used, audio_features, ensemble_info)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `)
-
-    stmt.run([
-      result.timestamp,
-      result.confidence,
-      source,
-      result.modelUsed || 'unknown',
-      JSON.stringify(result.features || {}),
-      JSON.stringify(result.ensemble || {}),
-    ])
-
-    stmt.finalize()
   }
 
   stop() {
-    if (this.ffmpegProcess) {
-      this.ffmpegProcess.kill()
-    } else {
-      console.log('no ffmpeg process to kill')
+    if (!this.ffmpegProcess) {
+      console.error('No ffmpeg process to kill')
+      return
     }
-    console.log(`📊 Total detections: ${this.detectionCount}`)
+    this.ffmpegProcess.kill()
+    this.emitter.emit('end', null)
+    setImmediate(() => {
+      this.emitter.removeAllListeners()
+    })
+    this.recordingsRepo.update(this.recordingId, {
+      status: 'completed',
+      endTime: new Date().toISOString(),
+    })
   }
 }

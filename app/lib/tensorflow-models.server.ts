@@ -68,7 +68,7 @@ export default class YAMNetBarkDetector {
   }
 
   // Pre-process audio for YAMNet (requires specific format)
-  private preprocessAudio(audioBuffer: Buffer) {
+  private preprocessAudio(audioBuffer: Buffer[]) {
     // YAMNet expects 16kHz audio, pad or truncate to correct length
     let processedAudio = Float32Array.from(audioBuffer)
 
@@ -87,7 +87,7 @@ export default class YAMNetBarkDetector {
     return tf.tensor1d(processedAudio)
   }
 
-  public async detectBark(audioBuffer: Buffer, timestamp: Date) {
+  public async detectBark(audioBuffer: Buffer[], timestamp: Date) {
     if (!this.model) {
       throw new Error('Must initialise model through initModel function first')
     }

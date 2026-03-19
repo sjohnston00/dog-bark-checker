@@ -3,3 +3,14 @@
 @plugin 'daisyui' {
   themes: dim;
 }
+
+.transition-progress-value::-webkit-progress-value {
+  /* @apply transition  */
+  transition: height 150ms
+    var(--tw-ease, var(--default-transition-timing-function));
+}
+
+.progress-vertical {
+  writing-mode: vertical-lr;
+  direction: rtl;
+}

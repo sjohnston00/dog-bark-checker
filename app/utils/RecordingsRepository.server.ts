@@ -1,7 +1,6 @@
 import { type Database } from 'better-sqlite3'
-import type { Recording, RecordingLog } from './db.server'
+import type { Recording, RecordingBark, RecordingLog } from './db.server'
 import type { PickTuple } from '~/types/helpers'
-
 
 export default class RecordingsRepository {
   private db: Database
@@ -17,20 +16,52 @@ export default class RecordingsRepository {
   }
 
   getById(id: number) {
-    const stmt = this.db.prepare<[number], Recording>('SELECT * FROM recordings WHERE id = ?')
+    const stmt = this.db.prepare<[number], Recording>(
+      'SELECT * FROM recordings WHERE id = ?'
+    )
     const r = stmt.get(id)
 
-    const logsStmt = this.db.prepare<[number], RecordingLog>('SELECT * FROM recording_logs WHERE recordingId = ?')
+    if (!r) return
+
+    const logsStmt = this.db.prepare<[number], RecordingLog>(
+      'SELECT * FROM recording_logs WHERE recordingId = ?'
+    )
     const logs = logsStmt.all(id)
     return {
       ...r,
-      logs
+      logs,
     }
   }
 
-
-  create(recording: Pick<Recording, 'date' | 'startTime' | 'deviceId' | 'endTime' | 'filePath' | 'notes' | 'status' | 'modelUsed'>) {
-    const stmt = this.db.prepare<PickTuple<typeof recording, ['date', 'startTime', 'endTime', 'filePath', 'notes', 'status', 'modelUsed', 'deviceId']>, never>(
+  create(
+    recording: Pick<
+      Recording,
+      | 'date'
+      | 'startTime'
+      | 'deviceId'
+      | 'endTime'
+      | 'filePath'
+      | 'notes'
+      | 'status'
+      | 'modelUsed'
+    >
+  ) {
+    const stmt = this.db.prepare<
+      PickTuple<
+        typeof recording,
+        [
+          'date',
+          'startTime',
+          'endTime',
+          'filePath',
+          'notes',
+          'status',
+          'modelUsed',
+          'deviceId',
+        ]
+      >,
+      never
+    >(
       `INSERT INTO recordings (date, startTime, endTime, filePath, notes, status, modelUsed, deviceId) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     )
@@ -76,16 +107,42 @@ export default class RecordingsRepository {
     stmt.run(id)
   }
 
-  appendLog({ text, recordingId, level }: Pick<RecordingLog, 'text' | 'recordingId' | 'level'>) {
+  appendLog({
+    text,
+    recordingId,
+    level,
+  }: Pick<RecordingLog, 'text' | 'recordingId' | 'level'>) {
     const stmt = this.db.prepare<[string, number, string], never>(
       `INSERT INTO recording_logs (text, recordingId, level) 
        VALUES (?, ?, ?)`
     )
-    const result = stmt.run(
-      text,
-      recordingId,
-      level
-    )
+    const result = stmt.run(text, recordingId, level)
     return result.lastInsertRowid as number
+  }
+
+  saveBarkDetection(
+    recordingBark: Pick<
+      RecordingBark,
+      'recordingId' | 'timestamp' | 'confidence' | 'source' | 'modelUsed'
+    >
+  ) {
+    const stmt = this.db.prepare<
+      PickTuple<
+        typeof recordingBark,
+        ['recordingId', 'timestamp', 'confidence', 'source', 'modelUsed']
+      >,
+      never
+    >(`
+      INSERT INTO recording_barks (recordingId, timestamp, confidence, source, modelUsed)
+      VALUES (?, ?, ?, ?, ?)
+  `)
+
+    return stmt.run(
+      recordingBark.recordingId,
+      recordingBark.timestamp,
+      recordingBark.confidence,
+      recordingBark.source,
+      recordingBark.modelUsed || 'unknown'
+    )
   }
 }

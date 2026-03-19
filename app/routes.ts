@@ -11,4 +11,9 @@ export default [
   // Recordings
   route('/recordings', 'routes/recordings.index.tsx'),
   route('/recordings/:id', 'routes/recordings.$id.tsx'),
+  route('/recordings/:id/sse', 'routes/recordings.$id.sse.ts'),
+
+  route('/streamSubscription', 'routes/streamSubscription.tsx'),
+  route('/stream', 'routes/stream.ts'),
+  route('/stream/:id', 'routes/stream.$id.ts'),
 ] satisfies RouteConfig

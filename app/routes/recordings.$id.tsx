@@ -1,22 +1,22 @@
+import { formatDate } from 'date-fns'
 import { data, isRouteErrorResponse, Link } from 'react-router'
-import { Heading } from '~/components/ui/heading'
-import db from '~/utils/db.server'
-import RecordingsRepository from '~/utils/RecordingsRepository.server'
-import type { Route } from './+types/recordings.$id'
+import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
+import { twMerge } from 'tailwind-merge'
 import { Card, CardContent, CardTitle } from '~/components/ui/card'
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from '~/components/ui/chart'
-import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
-import { formatDate } from 'date-fns'
-import { twMerge } from 'tailwind-merge'
+import { Heading } from '~/components/ui/heading'
 import type { Detection } from '~/types/db'
+import db from '~/utils/db.server'
 import {
   aggregateByDetectionsMinute,
   type AggregatedByMinuteDetection,
 } from '~/utils/detections-transforms.server'
+import RecordingsRepository from '~/utils/RecordingsRepository.server'
+import type { Route } from './+types/recordings.$id'
 
 export async function loader({ params }: Route.LoaderArgs) {
   const recordingId = Number(params.id)
@@ -30,8 +30,6 @@ export async function loader({ params }: Route.LoaderArgs) {
   if (!recording) {
     throw data({ message: 'Recording not found' }, { status: 404 })
   }
-
-  console.log(recording)
 
   let barks: (Detection & { recordingId: number })[] = []
 
@@ -51,8 +49,6 @@ export async function loader({ params }: Route.LoaderArgs) {
       recording.endTime ? new Date(recording.endTime) : new Date()
     )
   }
-  console.log(barks)
-  console.log(barksAggregatedByMinute)
 
   return data({
     recording,
@@ -184,9 +180,9 @@ export default function Page({ loaderData }: Route.ComponentProps) {
       <Heading size={'h2'} className='mt-4'>
         Logs
       </Heading>
-      <pre className='p-4 rounded shadow bg-base-200 min-h-100 mt-4 w-full overflow-auto'>
+      <pre className='p-4 rounded shadow bg-base-200 min-h-100 h-full mt-4 w-full overflow-auto'>
         {recording.logs.map((l) => (
-          <span className='bg-error/20 p-1'>
+          <span key={l.id} className='bg-error/20 p-1 block mt-px w-full'>
             [{l.createdAt}] - {l.text}
           </span>
         ))}
